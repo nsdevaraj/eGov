@@ -39,7 +39,7 @@
 #-------------------------------------------------------------------------------*/
 $(document).ready(function(){
 	
-	var fileformats = ['jpg', 'jpeg', 'gif', 'png',  '3g2', '3gp', '3gp2', '3gpp', 'avi', 'divx', 'flv', 'mov', 'mp4', 'mpeg4', 'mpg4', 'mpeg', 'mpg', 'm4v', 'wmv' ];
+	var fileformats = ['jpg', 'jpeg', 'gif', 'png' ];
 	var myCenter;
 	
 	var fileinputid = ['file1','file2','file3'];//assigning file id
@@ -357,7 +357,6 @@ $(document).ready(function(){
 			success : function(data){
 				 address = data.results[0].formatted_address;
 				 $('#location').typeahead('val', address);
-				 $('#latlngaddress').val(address);
 			}
 		});	
 		$('#lat').val(lat);

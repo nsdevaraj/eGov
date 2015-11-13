@@ -434,7 +434,7 @@ public interface PropertyTaxConstants {
     public static final String DEMANDRSN_STR_LIBRARY_CESS = "Library Cess";
     public static final String DEMANDRSN_STR_EDUCATIONAL_CESS = "Education Cess";
     public static final String DEMANDRSN_STR_UNAUTHORIZED_PENALTY = "Unauthorized Penalty";
-    public static final String DEMANDRSN_STR_CHQ_BOUNCE_PENALTY = "CHEQUE BOUNCE PENALTY";
+    public static final String DEMANDRSN_STR_CHQ_BOUNCE_PENALTY = "Cheque Bounce Penalty";
     public static final String DEMANDRSN_STR_PENALTY_FINES = "PENALTY_FINES";
     public static final String DEMANDRSN_STR_ADVANCE = "ADVANCE";
     public static final String DEMANDRSN_STR_ADVANCE_REBATE = "ADVANCE_REBATE";
@@ -594,7 +594,9 @@ public interface PropertyTaxConstants {
     // Property is default values
     public static final Character PROPERTY_IS_DEFAULT = 'Y';
     public static final Character PROPERTY_IS_NOT_DEFAULT = 'N';
-
+    public static final String PROP_CREATE_RSN_NEWPROPERTY_CODE = "NEW";
+    public static final String PROP_CREATE_RSN_NEWPROPERTY_BIFURCATION_CODE = "BIFUR";
+     
     // Property Modification Reasons
     public static final String PROPERTY_MODIFY_REASON_AMALG = "AMALG";
     public static final String PROPERTY_MODIFY_REASON_BIFURCATE = "BIFURCATE";
@@ -1052,6 +1054,10 @@ public interface PropertyTaxConstants {
     public static final String THIRD_PARTY_ERR_CODE_PAYMENT_UPDATE_FAILED_WITH_INPUT = "106";
     public static final String THIRD_PARTY_ERR_MSG_PAYMENT_UPDATE_FAILED_WITH_INPUT = "Payment update fail due to input data issues";
     public static final String THIRD_PARTY_ERR_CODE_ASSESSMENT_NO_NOT_FOUND = "PTIS-REST-11";
+    public static final String THIRD_PARTY_ERR_CODE_TRANSANCTIONID_REQUIRED = "PTIS-REST-25";
+    public static final String THIRD_PARTY_ERR_MSG_TRANSANCTIONID_REQUIRED = "Invalid Request, No transaction ID is associated";
+    public static final String THIRD_PARTY_ERR_CODE_TRANSANCTIONID_VALIDATE = "PTIS-REST-26";
+    public static final String THIRD_PARTY_ERR_MSG_TRANSANCTIONID_VALIDATE = "Invalid Request, Used transaction ID is associated";
     public static final String THIRD_PARTY_ERR_MSG_ASSESSMENT_NO_NOT_FOUND = "Assessment number not found";
     public static final String THIRD_PARTY_ERR_CODE_ASSESSMENT_NO_REQUIRED = "PTIS-REST-12";
     public static final String THIRD_PARTY_ERR_MSG_ASSESSMENT_NO_REQUIRED = "Assessment number is required";

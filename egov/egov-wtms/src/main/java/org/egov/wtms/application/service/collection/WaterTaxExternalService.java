@@ -211,6 +211,10 @@ public class WaterTaxExternalService {
         waterTaxDetails.setConsumerNo(waterConnectionDetails.getConnection().getConsumerCode());
         String propertyIdentifier = waterConnectionDetails.getConnection().getPropertyIdentifier();
         final BasicProperty basicProperty = basicPropertyDAO.getBasicPropertyByPropertyID(propertyIdentifier);
+        waterTaxDetails.setPropertyAddress(basicProperty.getAddress().toString());
+        waterTaxDetails.setLocalityName(basicProperty.getPropertyID().getLocality().getName());
+        
+        
         final List<PropertyOwnerInfo> propOwnerInfos =basicProperty.getPropertyOwnerInfo();
         if(propOwnerInfos.size()>0)
         {
@@ -218,8 +222,8 @@ public class WaterTaxExternalService {
         	waterTaxDetails.setMobileNo(propOwnerInfos.get(0).getOwner().getMobileNumber());
         }
         
-        final List<ArrearDetails> arrearDetailsList = new ArrayList<ArrearDetails>();
-        final List<Object> list = ptDemandDAO.getPropertyTaxDetails(propertyIdentifier);
+       // final List<ArrearDetails> arrearDetailsList = new ArrayList<ArrearDetails>();
+        final List<Object> list = ptDemandDAO.getTaxDetailsForWaterConnection(waterConnectionDetails.getConnection().getConsumerCode(),waterConnectionDetails.getConnectionType().name());
         if(list.size()>0)
         {
         	waterTaxDetails.setTaxDetails(new ArrayList<RestPropertyTaxDetails>());
@@ -274,8 +278,7 @@ public class WaterTaxExternalService {
             	
             }
             	
-            System.out.println(data.toString());
-            
+           
         }
         if(arrearDetails!=null)
     	{
@@ -440,12 +443,15 @@ public class WaterTaxExternalService {
         final Map<String, String> paymentDetailsMap = new HashMap<String, String>();
         paymentDetailsMap.put(PropertyTaxConstants.TOTAL_AMOUNT, payWaterTaxDetails.getPaymentAmount().toString());
         paymentDetailsMap.put(PropertyTaxConstants.PAID_BY, payWaterTaxDetails.getPaidBy());
+        if(PropertyTaxConstants.THIRD_PARTY_PAYMENT_MODE_CHEQUE.equalsIgnoreCase(payWaterTaxDetails.getPaymentMode().toLowerCase()))
+        {
         paymentDetailsMap.put(ChequePayment.INSTRUMENTNUMBER, payWaterTaxDetails.getChqddNo());
         paymentDetailsMap.put(ChequePayment.INSTRUMENTDATE, payWaterTaxDetails.getChqddDate());
         paymentDetailsMap.put(ChequePayment.BRANCHNAME, payWaterTaxDetails.getBranchName());
         Long validatesBankId = validateBank(payWaterTaxDetails.getBankName());
         paymentDetailsMap.put(ChequePayment.BANKID, validatesBankId.toString());
         paymentDetailsMap.put(ChequePayment.BANKNAME, payWaterTaxDetails.getBankName());
+        }
         final Payment payment = Payment.create(payWaterTaxDetails.getPaymentMode().toLowerCase(), paymentDetailsMap);
       
         final BillReceiptInfo billReceiptInfo = executeCollection(payment, egBill);
@@ -469,6 +475,10 @@ public class WaterTaxExternalService {
    
 		
 	}
+    
+    public BillReceiptInfo validateTransanctionIdPresent(final String transantion) {
+       return (BillReceiptInfo) collectionService.getReceiptInfo(WaterTaxConstants.COLLECTION_STRING_SERVICE_CODE, transantion);
+    }
     // TODO:EgBillDao is not intialising Request is comes from RestController so
     // using BillCreation method here only
     public final EgBill generateBill(final Billable billObj) {

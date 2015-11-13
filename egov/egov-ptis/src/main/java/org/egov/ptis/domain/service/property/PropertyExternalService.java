@@ -69,12 +69,14 @@ import javax.persistence.Query;
 
 import org.apache.commons.io.FilenameUtils;
 import org.egov.collection.integration.models.BillReceiptInfo;
+import org.egov.collection.integration.services.CollectionIntegrationService;
 import org.egov.commons.Area;
 import org.egov.commons.Bank;
 import org.egov.commons.Installment;
 import org.egov.commons.dao.BankHibernateDAO;
 import org.egov.dcb.bean.ChequePayment;
 import org.egov.dcb.bean.Payment;
+import org.egov.dcb.service.EgovSpringBeanDefinition;
 import org.egov.demand.model.EgBill;
 import org.egov.eis.entity.Assignment;
 import org.egov.eis.service.AssignmentService;
@@ -194,6 +196,9 @@ public class PropertyExternalService {
     @Autowired
     @Qualifier("fileStoreService")
     protected FileStoreService fileStoreService;
+    
+    @Autowired
+    private CollectionIntegrationService collectionService;
     @Autowired
     private PropertyPersistenceService basicPropertyService;
     private final List<String> uploadFileNames = new ArrayList<String>();
@@ -609,11 +614,14 @@ public class PropertyExternalService {
         final Map<String, String> paymentDetailsMap = new HashMap<String, String>();
         paymentDetailsMap.put(PropertyTaxConstants.TOTAL_AMOUNT, payPropertyTaxDetails.getPaymentAmount().toString());
         paymentDetailsMap.put(PropertyTaxConstants.PAID_BY, payPropertyTaxDetails.getPaidBy());
+        if(PropertyTaxConstants.THIRD_PARTY_PAYMENT_MODE_CHEQUE.equalsIgnoreCase(payPropertyTaxDetails.getPaymentMode().toLowerCase()))
+        {
         paymentDetailsMap.put(ChequePayment.INSTRUMENTNUMBER, payPropertyTaxDetails.getChqddNo());
         paymentDetailsMap.put(ChequePayment.INSTRUMENTDATE, ChequePayment.CHEQUE_DATE_FORMAT.format(payPropertyTaxDetails.getChqddDate()));
         paymentDetailsMap.put(ChequePayment.BRANCHNAME, payPropertyTaxDetails.getBranchName());
         Long validatesBankId = validateBank(payPropertyTaxDetails.getBankName());
         paymentDetailsMap.put(ChequePayment.BANKID, validatesBankId.toString());
+        }
         final Payment payment = Payment.create(payPropertyTaxDetails.getPaymentMode().toLowerCase(), paymentDetailsMap);
         final BillReceiptInfo billReceiptInfo = collectionHelper.executeCollection(payment);
 
@@ -1649,6 +1657,10 @@ public class PropertyExternalService {
         }
         return document;
     }
+
+    public BillReceiptInfo validateTransanctionIdPresent(final String transantion) {
+        return ( BillReceiptInfo ) collectionService.getReceiptInfo(PropertyTaxConstants.PTIS_COLLECTION_SERVICE_CODE, transantion);
+     }
 
     private Document createDocument(final InputStream inputStream, final String fileName) {
         final Document document = new Document();
