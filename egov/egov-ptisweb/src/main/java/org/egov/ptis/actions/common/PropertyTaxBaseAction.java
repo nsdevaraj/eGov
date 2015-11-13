@@ -59,6 +59,7 @@ import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_APP
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_FORWARD;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_REJECT;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SAVE;
+import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_ASSISTANT_APPROVAL_PENDING;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_COMMISSIONER_APPROVED;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_REJECTED;
@@ -80,6 +81,7 @@ import org.egov.eis.service.AssignmentService;
 import org.egov.eis.service.DesignationService;
 import org.egov.eis.service.EisCommonService;
 import org.egov.eis.service.EmployeeService;
+import org.egov.eis.service.PositionMasterService;
 import org.egov.eis.web.actions.workflow.GenericWorkFlowAction;
 import org.egov.infra.admin.master.entity.Department;
 import org.egov.infra.admin.master.entity.User;
@@ -155,6 +157,8 @@ public abstract class PropertyTaxBaseAction extends GenericWorkFlowAction {
     private SecurityUtils securityUtils;
     @Autowired
     private UserService userService;
+    @Autowired
+    private PositionMasterService positionMasterService;
     private PropertyImpl propertyModel;
     protected WorkflowBean workflowBean;
 
@@ -473,6 +477,8 @@ public abstract class PropertyTaxBaseAction extends GenericWorkFlowAction {
             if (null != approverPositionId && approverPositionId != -1)
                 pos = (Position) persistenceService.find("from Position where id=?", approverPositionId);
             else if (WFLOW_ACTION_STEP_APPROVE.equalsIgnoreCase(workFlowAction))
+                pos = positionMasterService.getPositionByUserId(securityUtils.getCurrentUser().getId());
+            else if (WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(workFlowAction))
                 pos = wfInitiator.getPosition();
             if (null == property.getState()) {
                 final WorkFlowMatrix wfmatrix = propertyWorkflowService.getWfMatrix(property.getStateType(), null,

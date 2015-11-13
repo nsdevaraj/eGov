@@ -78,12 +78,15 @@ public class PropertyTaxNumberGenerator {
         try {
             if (org.apache.commons.lang.StringUtils.isNotBlank(noticeType))
                 if (noticeType.equalsIgnoreCase(PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE)) {
-                    final String cityCode = EgovThreadLocals.getCityCode();
                     noticeNo.append("SN").append("/");
-                    noticeNo.append(cityCode);
-                    final String index = sequenceNumberGenerator.getNextSequence(SEQ_EGPT_NOTICE_NUMBER).toString();
-                    noticeNo.append(org.apache.commons.lang.StringUtils.leftPad(index, 6, "0"));
+                } else if (noticeType.equalsIgnoreCase(PropertyTaxConstants.NOTICE_TYPE_MUTATION_CERTIFICATE)) {
+                    noticeNo.append("MC").append("/");
                 }
+                final String cityCode = EgovThreadLocals.getCityCode();
+                noticeNo.append(cityCode);
+                final String index = sequenceNumberGenerator.getNextSequence(SEQ_EGPT_NOTICE_NUMBER).toString();
+                noticeNo.append(org.apache.commons.lang.StringUtils.leftPad(index, 6, "0"));
+            
         } catch (final Exception e) {
             throw new ApplicationRuntimeException("Exception : " + e.getMessage(), e);
         }

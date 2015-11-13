@@ -57,9 +57,12 @@ import org.egov.ptis.notice.PtNotice;
 import org.hibernate.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
 
+@Service
 public class NoticeService extends PersistenceService<PtNotice, Long> {
     private static final Logger LOGGER = Logger.getLogger(NoticeService.class);
+    @Autowired
     PersistenceService<BasicProperty, Long> basicPropertyService;
     @Autowired
     private ModuleService moduleDao;
@@ -112,6 +115,11 @@ public class NoticeService extends PersistenceService<PtNotice, Long> {
 
     public PtNotice getNoticeByApplicationNumber(final String applicationNo) {
         return (PtNotice) basicPropertyService.find("from PtNotice where applicationNumber = ?", applicationNo);
+    }
+    
+    public PtNotice getNoticeByNoticeTypeAndApplicationNumber(final String noticeType, final String applicationNo) {
+        return (PtNotice) basicPropertyService.find("from PtNotice where noticeType = ? and applicationNumber = ?", noticeType,
+                applicationNo);
     }
 
     public PersistenceService<BasicProperty, Long> getBasicPropertyService() {

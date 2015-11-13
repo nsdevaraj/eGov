@@ -91,23 +91,23 @@
 	   return true;
 	}
 	
-  function onSubmit() {
-	  var actionName = document.getElementById('workFlowAction').value;
-	  if(actionName == 'Generate Notice') {
-		  generateNotice();
-	   } else {
-		document.forms[0].action = 'createProperty-forward.action';
-		document.forms[0].submit;
-	    return true;
-	   }
+	function onSubmit() {
+		var actionName = document.getElementById('workFlowAction').value;
+	  	if(actionName == 'Generate Notice' || actionName == 'Preview' || actionName == 'Sign') {
+			generateNotice(actionName);
+	   	} else {
+			document.forms[0].action = 'createProperty-forward.action';
+			document.forms[0].submit;
+	    	return true;
+	   	}
 	 } 
 	 	
- 	function generateNotice(){
- 	 	var noticeType = '<s:property value="%{@org.egov.ptis.constants.PropertyTaxConstants@NOTICE_TYPE_SPECIAL_NOTICE}"/>';
-	   	document.CreatePropertyForm.action="../notice/propertyTaxNotice-generateNotice.action?basicPropId=<s:property value='%{basicProp.id}'/>&noticeType="+noticeType+"&noticeMode=create";
+	function generateNotice(actionName){
+ 		var noticeType = '<s:property value="%{@org.egov.ptis.constants.PropertyTaxConstants@NOTICE_TYPE_SPECIAL_NOTICE}"/>';
+	   	document.CreatePropertyForm.action="../notice/propertyTaxNotice-generateNotice.action?basicPropId=<s:property value='%{basicProp.id}'/>&noticeType="+noticeType+"&noticeMode=create&actionType="+actionName;
 		document.CreatePropertyForm.submit();
 	}
-	
+
   	function loadDesignationFromMatrix() {
   		var e = dom.get('approverDepartment');
   		var dept = e.options[e.selectedIndex].text;

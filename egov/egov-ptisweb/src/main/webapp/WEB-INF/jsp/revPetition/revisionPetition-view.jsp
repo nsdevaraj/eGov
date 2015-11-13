@@ -170,8 +170,8 @@
 			}
 		} else if (actionName == 'Print Endoresement') {
 			action = 'revPetition-generateEnodresementNotice.action';
-		} else if (actionName == 'Print Special Notice') {
-			action = 'revPetition-generateSpecialNotice.action';
+		} else if (actionName == 'Print Special Notice' || actionName == 'Preview' || actionName == 'Sign') {
+			action = 'revPetition-generateSpecialNotice.action?actionType='+actionName;
 		} else if (actionName == 'Reject Inspection') {
 			action = 'revPetition-rejectInspectionDetails.action';
 		} else if (actionName == 'Reject') {

@@ -530,6 +530,8 @@ public interface PropertyTaxConstants {
     public static final String WFLOW_ACTION_STEP_SAVE = "Save";
     public static final String WFLOW_ACTION_STEP_FORWARD = "Forward";
     public static final String WFLOW_ACTION_STEP_APPROVE = "Approve";
+    public static final String WFLOW_ACTION_STEP_SIGN = "Sign";
+    public static final String WFLOW_ACTION_STEP_PREVIEW = "Preview";
     public static final String WFLOW_ACTION_STEP_REJECT = "Reject";
     public static final String WFLOW_ACTION_STEP_CANCEL = "Cancel";
     public static final String WFLOW_ACTION_STEP_NOTICE_GENERATE = "Generate Notice";
@@ -556,6 +558,8 @@ public interface PropertyTaxConstants {
     public static final String WF_STATE_NOTICE_GENERATION_PENDING = "Notice_Generation_Pending";
     public static final String WF_STATE_NOTICE_GENERATED = "Notice Generated";
     public static final String WF_STATE_COMMISSIONER_APPROVED = "Commissioner Approved";
+    public static final String WF_STATE_DIGITALLY_SIGNED = "Digitally Signed";
+    public static final String WF_STATE_DIGITAL_SIGNATURE_PENDING = "Digital Signature Pending";
     public static final String WF_STATE_COMMISSIONER_REJECTED = "Commissioner Rejected";
     public static final String WF_STATE_REVENUE_OFFICER_APPROVED = "Revenue officer Approved";
     public static final String WF_STATE_REVENUE_OFFICER_REJECTED = "Revenue officer Rejected";
@@ -915,6 +919,7 @@ public interface PropertyTaxConstants {
 
     public static final String NOTICE_TYPE_BILL = "Bill";
     public static final String NOTICE_TYPE_SPECIAL_NOTICE = "Special Notice";
+    public static final String NOTICE_TYPE_MUTATION_CERTIFICATE = "Mutation Certificate";
 
     public static final String CREATE_AUDIT_ACTION = "Create Property";
     public static final String MODIFY_AUDIT_ACTION = "Modify Property";

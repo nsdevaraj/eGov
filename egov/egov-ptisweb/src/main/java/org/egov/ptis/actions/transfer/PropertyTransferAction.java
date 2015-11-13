@@ -51,6 +51,7 @@ import static org.egov.ptis.constants.PropertyTaxConstants.TARGET_WORKFLOW_ERROR
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_READY_FOR_PAYMENT;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_APPROVE;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_REJECT;
+import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_ASSISTANT_APPROVAL_PENDING;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_COMMISSIONER_APPROVED;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_REJECTED;
@@ -77,12 +78,14 @@ import org.apache.struts2.convention.annotation.Results;
 import org.apache.struts2.interceptor.validation.SkipValidation;
 import org.egov.eis.entity.Assignment;
 import org.egov.eis.service.AssignmentService;
+import org.egov.eis.service.PositionMasterService;
 import org.egov.eis.web.actions.workflow.GenericWorkFlowAction;
 import org.egov.infra.admin.master.entity.User;
 import org.egov.infra.admin.master.service.UserService;
 import org.egov.infra.messaging.MessagingService;
 import org.egov.infra.reporting.engine.ReportConstants;
 import org.egov.infra.reporting.viewer.ReportViewerUtil;
+import org.egov.infra.security.utils.SecurityUtils;
 import org.egov.infra.utils.ApplicationNumberGenerator;
 import org.egov.infra.web.struts.actions.BaseFormAction;
 import org.egov.infra.web.struts.annotation.ValidationErrorPage;
@@ -165,6 +168,12 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
     @Autowired
     private MessagingService messagingService;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+    
+    @Autowired
+    private PositionMasterService positionMasterService;
+    
     // Model and View data
     private Long mutationId;
     private String assessmentNo;
@@ -192,6 +201,7 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
     private Boolean loggedUserIsMeesevaUser = Boolean.FALSE;
     
     private Map<String, String> guardianRelationMap;
+    private String actionType;
 
     public PropertyTransferAction() {
         addRelatedEntity("mutationReason", PropertyMutationMaster.class);
@@ -359,17 +369,18 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
         transferOwnerService.approvePropertyTransfer(basicproperty, propertyMutation);
         transferOwnerService.viewPropertyTransfer(basicproperty, propertyMutation);
         approverName = "";
-        if (propertyService.isEmployee(propertyMutation.getCreatedBy()))
+        /*if (propertyService.isEmployee(propertyMutation.getCreatedBy()))
             mutationInitiatedBy = propertyMutation.getCreatedBy().getName();
         else
             mutationInitiatedBy = assignmentService
                     .getPrimaryAssignmentForPositon(
                             propertyMutation.getStateHistory().get(0).getOwnerPosition().getId()).getEmployee()
-                    .getUsername();
+                    .getUsername();*/
+        mutationInitiatedBy = securityUtils.getCurrentUser().getUsername();
         buildSMS(propertyMutation);
         buildEmail(propertyMutation);
         setAckMessage("Transfer of ownership is created successfully in the system and forwarded to : ");
-        setAssessmentNoMessage(" for notice generation for the property : ");
+        setAssessmentNoMessage(" for Digital Signature for the property : ");
         return ACK;
     }
 
@@ -398,9 +409,12 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
         final String cityLogo = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
                 (String) request.getSession().getAttribute("citylogo"));
         final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
+        if (WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(actionType)) {
+            transitionWorkFlow(propertyMutation);
+        }
         getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
         reportId = ReportViewerUtil.addReportToSession(
-                transferOwnerService.generateTransferNotice(basicproperty, propertyMutation, cityName, cityLogo),
+                transferOwnerService.generateTransferNotice(basicproperty, propertyMutation, cityName, cityLogo, actionType),
                 getSession());
         return PRINTNOTICE;
     }
@@ -564,6 +578,8 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
             if (null != approverPositionId && approverPositionId != -1)
                 pos = (Position) persistenceService.find("from Position where id=?", approverPositionId);
             else if (WFLOW_ACTION_STEP_APPROVE.equalsIgnoreCase(workFlowAction))
+                pos = positionMasterService.getPositionByUserId(securityUtils.getCurrentUser().getId());
+            else
                 pos = wfInitiator.getPosition();
             if (null == propertyMutation.getState()) {
                 final WorkFlowMatrix wfmatrix = transferWorkflowService.getWfMatrix(propertyMutation.getStateType(),
@@ -841,6 +857,14 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
 
     public void setUserDesignation(final String userDesignation) {
         this.userDesignation = userDesignation;
+    }
+
+    public String getActionType() {
+        return actionType;
+    }
+
+    public void setActionType(String actionType) {
+        this.actionType = actionType;
     }
 
 }
