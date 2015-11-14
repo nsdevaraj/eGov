@@ -478,7 +478,7 @@ public abstract class PropertyTaxBaseAction extends GenericWorkFlowAction {
                 pos = (Position) persistenceService.find("from Position where id=?", approverPositionId);
             else if (WFLOW_ACTION_STEP_APPROVE.equalsIgnoreCase(workFlowAction))
                 pos = positionMasterService.getPositionByUserId(securityUtils.getCurrentUser().getId());
-            else if (WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(workFlowAction))
+            else
                 pos = wfInitiator.getPosition();
             if (null == property.getState()) {
                 final WorkFlowMatrix wfmatrix = propertyWorkflowService.getWfMatrix(property.getStateType(), null,
