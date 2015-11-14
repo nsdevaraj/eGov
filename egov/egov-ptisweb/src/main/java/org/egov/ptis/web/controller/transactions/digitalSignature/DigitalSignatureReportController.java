@@ -12,7 +12,6 @@ import org.egov.infra.workflow.entity.StateAware;
 import org.egov.infra.workflow.entity.WorkflowTypes;
 import org.egov.infra.workflow.inbox.InboxRenderServiceDeligate;
 import org.egov.ptis.constants.PropertyTaxConstants;
-import org.egov.ptis.service.transactions.DigitalSignatureReportService;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -25,9 +24,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public class DigitalSignatureReportController {
 
     private static final String DIGITAL_SIGNATURE_REPORT_FORM = "digitalSignatureReport-form";
-
-    @Autowired
-    private DigitalSignatureReportService digitalSignatureReportService;
 
     @PersistenceContext
     private EntityManager entityManager;
