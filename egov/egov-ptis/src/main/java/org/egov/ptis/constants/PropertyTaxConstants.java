@@ -1224,4 +1224,6 @@ public interface PropertyTaxConstants {
     public static final String STATUS_APPROVED = "Approved";
     public static final String STATUS_OPEN = "Open";
     
+    public static final String DIGITAL_SIGNATURE_PENDING ="Digital Signature Pending"; 
+    
 }
