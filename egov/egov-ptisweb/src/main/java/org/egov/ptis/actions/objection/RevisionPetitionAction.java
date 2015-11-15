@@ -925,6 +925,9 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
     @Action(value = "/revPetition/revPetition-generateSpecialNotice")
     public String generateSpecialNotice() {
 
+        if (PREVIEW.equalsIgnoreCase(actionType)) {
+            objection = revisionPetitionService.findById(Long.valueOf(parameters.get("objectionId")[0]), false);
+        }
         /*
          * Change basic property status from Objected to Assessed.
          */

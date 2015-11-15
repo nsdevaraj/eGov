@@ -48,7 +48,16 @@
 	jQuery.noConflict();
 	jQuery("#loadingMask").remove();
 	function generateMutationCertificate(actionName) {
-		window.location = "printNotice.action?mutationId=" + mutationId.value + "&actionType=" + actionName;
+		if (actionName == 'Preview') {
+			var params = [
+	   			'height='+screen.height,
+	   		    'width='+screen.width,
+	   		    'fullscreen=yes' 
+	   		].join(',');
+			window.open("printNotice.action?mutationId=" + mutationId.value + "&actionType=" + actionName, 'NoticeWindow', params);
+		} else {
+			window.location = "printNotice.action?mutationId=" + mutationId.value + "&actionType=" + actionName;
+		}
 	}
 
 	function onSubmit() {
