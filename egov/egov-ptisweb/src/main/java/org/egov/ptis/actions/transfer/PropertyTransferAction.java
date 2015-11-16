@@ -866,7 +866,8 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
 
     public void setActionType(String actionType) {
         this.actionType = actionType;
-
+    }
+    
     public String getMeesevaApplicationNumber() {
         return meesevaApplicationNumber;
     }
