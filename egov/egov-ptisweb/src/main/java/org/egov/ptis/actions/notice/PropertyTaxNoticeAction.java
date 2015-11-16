@@ -41,6 +41,7 @@ package org.egov.ptis.actions.notice;
 
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_ALTER_ASSESSENT;
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_DEMOLITION;
+import static org.egov.ptis.constants.PropertyTaxConstants.COMMISSIONER_DESGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
 import static org.egov.ptis.constants.PropertyTaxConstants.QUERY_BASICPROPERTY_BY_BASICPROPID;
 
@@ -67,6 +68,8 @@ import org.apache.struts2.convention.annotation.ParentPackage;
 import org.apache.struts2.convention.annotation.Result;
 import org.apache.struts2.convention.annotation.Results;
 import org.egov.demand.model.EgDemandDetails;
+import org.egov.eis.service.DesignationService;
+import org.egov.infra.admin.master.entity.User;
 import org.egov.infra.exception.ApplicationRuntimeException;
 import org.egov.infra.filestore.entity.FileStoreMapper;
 import org.egov.infra.persistence.entity.Address;
@@ -121,6 +124,9 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     private PropertyService propService;
     final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     private String actionType;
+    
+    @Autowired
+    private DesignationService designationService;
 
     @Autowired
     private PtDemandDao ptDemandDAO;
@@ -140,7 +146,9 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
         final BasicPropertyImpl basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
                 QUERY_BASICPROPERTY_BY_BASICPROPID, basicPropId);
         property = (PropertyImpl) basicProperty.getProperty();
-
+        List<User> users = eisCommonService.getAllActiveUsersByGivenDesig(designationService.getDesignationByName(
+                COMMISSIONER_DESGN).getId());
+        reportParams.put("userId", !users.isEmpty() ? users.get(0).getId() : 0);
         if (property == null)
             property = (PropertyImpl) basicProperty.getWFProperty();
 
@@ -203,6 +211,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             }
             reportOutput.setReportOutputData(bFile);
             reportOutput.setReportFormat(FileFormat.PDF);
+            getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
             reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
             if (!PREVIEW.equals(actionType)) {
                 endWorkFlow(basicProperty);
