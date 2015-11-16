@@ -571,6 +571,7 @@ public interface PropertyTaxConstants {
     public static final String WF_STATE_ASSISTANT_APPROVAL_PENDING = "Assistant Approval Pending";
     public static final String WF_STATE_REVENUE_INSPECTOR_REJECTED = "Revenue Inspector Rejected";
     public static final String WF_STATE_REVENUE_INSPECTOR_APPROVAL_PENDING = "Revenue Inspector Approval Pending";
+    public static final String WF_STATE_BILL_COLLECTOR_APPROVED = "Bill Collector Approved";
     
 
     public static final String REPORT_TEMPLATENAME_BILL_GENERATION = "propertybill";
@@ -613,6 +614,7 @@ public interface PropertyTaxConstants {
     public static final String PROPERTY_MODIFY_REASON_ADD_OR_ALTER = "ADD_OR_ALTER";
     public static final String PROPERTY_MODIFY_REASON_EDIT_DATA_ENTRY = "EDIT_DATA_ENTRY";
     public static final String PROPERTY_MODIFY_REASON_FULL_DEMOLITION = "FULL DEMOLITION";
+    public static final String PROPERTY_MODIFY_REASON_TAX_EXEMPTION = "TAX EXEMPTION";
     public static final List<String> modifyReasons = Arrays.asList(PROPERTY_MODIFY_REASON_AMALG,
             PROPERTY_MODIFY_REASON_BIFURCATE, PROPERTY_MODIFY_REASON_OBJ, PROPERTY_MODIFY_REASON_DATA_ENTRY,
             PROPERTY_MODIFY_REASON_DATA_UPDATE, PROPERTY_MODIFY_REASON_MODIFY);
@@ -669,6 +671,7 @@ public interface PropertyTaxConstants {
     public static final String WFSTATUS = "WFSTATUS";
     public static final String WFOWNER = "WFOWNER";
     public static final String DEMOLITION = "DEMOLITION";
+    public static final String EXEMPTION = "EXEMPTION";
 
     // GIS
     public static final String GISCITY = "nmc";
@@ -1171,7 +1174,7 @@ public interface PropertyTaxConstants {
     public static final String APPLICATION_TYPE_TAX_EXEMTION = "Tax Exemption";
     public static final String APPLICATION_TYPE_DEMOLITION = "Demolition";
     public static final String APPLICATION_TYPE_VACANCY_REMISSION = "Vacancy Remission";
-    
+    public static final String APPLICATION_TYPE_MEESEVA_TRANSFER_OF_OWNERSHIP = "Meeseva_Transfer_of_Ownership";
    
 
     // AppConfig values

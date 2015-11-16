@@ -199,6 +199,9 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
     private Boolean propertyByEmployee = Boolean.TRUE;
     private String userDesignation;
     private Boolean loggedUserIsMeesevaUser = Boolean.FALSE;
+    private String meesevaApplicationNumber;
+    private String meesevaServiceCode;
+    private String applicationType;
     
     private Map<String, String> guardianRelationMap;
     private String actionType;
@@ -228,13 +231,11 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
                 
                 loggedUserIsMeesevaUser = propertyService.isMeesevaUser(transferOwnerService.getLoggedInUser());
                 if (loggedUserIsMeesevaUser) {
-                    final HttpServletRequest request = ServletActionContext.getRequest();
-                    if (request.getParameter("applicationNo") == null) {
+                     if (getMeesevaApplicationNumber() == null) {
                         addActionMessage(getText("mandatory.meesevaApplicationNumber"));
                         return ERROR;
                     } else {
-                        
-                        propertyMutation.setMeesevaApplicationNumber(request.getParameter("applicationNo"));
+                       propertyMutation.setMeesevaApplicationNumber(getMeesevaApplicationNumber());
                     }
                 }
                 
@@ -248,7 +249,7 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
     public String save() {
         transitionWorkFlow(propertyMutation);
          
-        loggedUserIsMeesevaUser = propertyService.isMeesevaUser(transferOwnerService.getLoggedInUser());
+        loggedUserIsMeesevaUser =propertyService.isMeesevaUser(transferOwnerService.getLoggedInUser());
         if (!loggedUserIsMeesevaUser) {
             transferOwnerService.initiatePropertyTransfer(basicproperty, propertyMutation);
         }
@@ -865,6 +866,29 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
 
     public void setActionType(String actionType) {
         this.actionType = actionType;
+
+    public String getMeesevaApplicationNumber() {
+        return meesevaApplicationNumber;
+    }
+
+    public void setMeesevaApplicationNumber(String meesevaApplicationNumber) {
+        this.meesevaApplicationNumber = meesevaApplicationNumber;
+    }
+
+    public String getMeesevaServiceCode() {
+        return meesevaServiceCode;
+    }
+
+    public void setMeesevaServiceCode(String meesevaServiceCode) {
+        this.meesevaServiceCode = meesevaServiceCode;
+    }
+
+    public String getApplicationType() {
+        return applicationType;
+    }
+
+    public void setApplicationType(String applicationType) {
+        this.applicationType = applicationType;
     }
 
 }
