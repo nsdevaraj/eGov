@@ -155,10 +155,15 @@
     	<put-attribute name="page-title" value="lbl.vacancyremission.final.approval" cascade="true"/>
     	<put-attribute name="body" value="/WEB-INF/views/vacancyremission/vacancyRemissionApproval-edit.jsp"/>
     </definition>
-    
+     
      <definition name="digitalSignatureReport-form" extends="base_layout">
     	<put-attribute name="page-title" value="lbl.digitalSignature.report.title" cascade="true"/>
     	<put-attribute name="body" value="/WEB-INF/views/transactions/digitalSignature/digitalSignatureReport-form.jsp"/>
+     </definition>
+
+    <definition name="propertyValidation" extends="base_layout">
+    	<put-attribute name="page-title" value="lbl.workflow.error" cascade="true"/>
+    	<put-attribute name="body" value="/WEB-INF/views/common/propertyValidation.jsp"/>
     </definition>
     
 </tiles-definitions>

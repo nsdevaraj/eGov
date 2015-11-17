@@ -39,6 +39,7 @@
 package org.egov.ptis.domain.service.transfer;
 
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_TRANSFER_OF_OWNERSHIP;
+
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
 import static org.egov.ptis.constants.PropertyTaxConstants.NOTICE_TYPE_MUTATION_CERTIFICATE;
 import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISACTIVE;
@@ -46,6 +47,7 @@ import static org.egov.ptis.constants.PropertyTaxConstants.TRANSFER;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_PREVIEW;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_CLOSED;
+import static org.egov.ptis.constants.PropertyTaxConstants.NOTICE_TYPE_MUTATION_CERTIFICATE;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -113,7 +115,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.transaction.annotation.Transactional;
 
 public class PropertyTransferService {
-    
+
     @Autowired
     @Qualifier("propertyMutationService")
     private PersistenceService<PropertyMutation, Long> propertyMutationService;
@@ -177,7 +179,7 @@ public class PropertyTransferService {
 
     @Autowired
     private PropertyTaxBillable propertyTaxBillable;
-    
+
     @Autowired
     private PropertyService propertyService;
     
@@ -191,7 +193,7 @@ public class PropertyTransferService {
         for (final PropertyOwnerInfo ownerInfo : basicProperty.getPropertyOwnerInfo())
             propertyMutation.getTransferorInfos().add(ownerInfo.getOwner());
         propertyMutation.setMutationDate(new Date());
-        if(propertyMutation.getApplicationNo()==null)
+        if (propertyMutation.getApplicationNo() == null)
             propertyMutation.setApplicationNo(applicationNumberGenerator.generate());
         createUserIfNotExist(propertyMutation.getTransfereeInfos());
         basicProperty.getPropertyMutations().add(propertyMutation);
@@ -308,13 +310,13 @@ public class PropertyTransferService {
         if (propertyMutation.getTransfereeInfos() != null && propertyMutation.getTransfereeInfos().size() > 0) {
             String newOwnerName = "";
             for (final User usr : propertyMutation.getTransfereeInfos())
-            	newOwnerName = newOwnerName + usr.getName() + ",";
+                newOwnerName = newOwnerName + usr.getName() + ",";
             ackBean.setOwnerName(newOwnerName.substring(0, newOwnerName.length() - 1));
         }
         ackBean.setOwnerAddress(basicProperty.getAddress().toString());
         ackBean.setNoOfDays(ptaxApplicationTypeService.findByNamedQuery(PtApplicationType.BY_CODE, TRANSFER)
                 .getResolutionTime().toString());
-        
+
         final ReportRequest reportInput = new ReportRequest("transferProperty_ack", ackBean, reportParams);
         reportInput.setReportFormat(FileFormat.PDF);
         return reportService.createReport(reportInput);
@@ -471,8 +473,8 @@ public class PropertyTransferService {
 
     public PropertyMutation initiatePropertyTransfer(BasicProperty basicproperty, PropertyMutation propertyMutation,
             HashMap<String, String> meesevaParams) {
-           initiatePropertyTransfer(basicproperty,propertyMutation);
-           return propertyMutation;
+        initiatePropertyTransfer(basicproperty, propertyMutation);
+        return propertyMutation;
     }
 
 }
