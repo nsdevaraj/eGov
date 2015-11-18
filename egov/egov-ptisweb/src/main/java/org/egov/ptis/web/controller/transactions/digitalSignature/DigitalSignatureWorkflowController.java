@@ -93,12 +93,12 @@ public class DigitalSignatureWorkflowController {
 
     @RequestMapping(value = "/propertyTax/transitionWorkflow/{fileStoreIds}")
     public String transitionWorkflow(final Model model, @PathVariable final String fileStoreIds) {
-        String[] fileStoreId = fileStoreIds.split(",");
-        for (String id : fileStoreId) {
-            BasicProperty basicProperty = (BasicProperty) getCurrentSession()
+        final String[] fileStoreId = fileStoreIds.split(",");
+        for (final String id : fileStoreId) {
+            final BasicProperty basicProperty = (BasicProperty) getCurrentSession()
                     .createQuery("select basicProperty from PtNotice where fileStore.fileStoreId = :id").setParameter("id", id)
                     .uniqueResult();
-            PropertyImpl property = basicProperty.getActiveProperty();
+            final PropertyImpl property = basicProperty.getActiveProperty();
             transitionWorkFlow(property);
             propertyService.updateIndexes(property, APPLICATION_TYPE_NEW_ASSESSENT);
             basicPropertyService.update(basicProperty);
@@ -107,10 +107,10 @@ public class DigitalSignatureWorkflowController {
         return DIGITAL_SIGNATURE_SUCCESS;
     }
 
-    private void transitionWorkFlow(PropertyImpl property) {
+    private void transitionWorkFlow(final PropertyImpl property) {
         final User user = securityUtils.getCurrentUser();
         final DateTime currentDate = new DateTime();
-        Position pos = getWorkflowInitiator(property).getPosition();
+        final Position pos = getWorkflowInitiator(property).getPosition();
         final WorkFlowMatrix wfmatrix = propertyWorkflowService.getWfMatrix(property.getStateType(), null,
                 null, APPLICATION_TYPE_NEW_ASSESSENT, property.getCurrentState().getValue(), null);
         property.transition(true).withSenderName(user.getName())
@@ -139,7 +139,7 @@ public class DigitalSignatureWorkflowController {
         return basicPropertyService;
     }
 
-    public void setBasicPropertyService(PersistenceService<BasicProperty, Long> basicPropertyService) {
+    public void setBasicPropertyService(final PersistenceService<BasicProperty, Long> basicPropertyService) {
         this.basicPropertyService = basicPropertyService;
     }
 
