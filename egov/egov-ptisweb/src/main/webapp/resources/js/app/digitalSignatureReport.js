@@ -43,27 +43,68 @@ jQuery('#selectAll').click(function(e){
     jQuery('td input:checkbox',table).prop('checked',e.target.checked);  
 });
 
+function callPreview(obj){
+	var rowobj=getRow(obj);
+	var tbl = document.getElementById('digSignDetailsTab');
+	var basicPropertyId=getControlInBranch(tbl.rows[rowobj.rowIndex],'objectId').value;
+	var actionName = 'Preview';
+	var params = [
+		   			'height='+screen.height, 
+		   		    'width='+screen.width,
+		   		    'fullscreen=yes' 
+		   		].join(',');
+		var noticeType='${noticeType}';  
+			   	window.open("../notice/propertyTaxNotice-generateNotice.action?basicPropId="+basicPropertyId+"&noticeType="+noticeType+"noticeMode=create&actionType="+actionName, "NoticeWindow", params);
+			   	return false; 
+}
+
+function generateNotice(obj,actionName){
+	var rowobj=getRow(obj);
+	var tbl = document.getElementById('digSignDetailsTab');
+	var basicPropertyId=getControlInBranch(tbl.rows[rowobj.rowIndex],'objectId').value;
+		var noticeType = '${noticeType}';  
+
+	jQuery.ajax({
+		url: "/ptis/notice/propertyTaxNotice-generateNotice.action?basicPropId="+basicPropertyId+"&noticeType="+noticeType+"&noticeMode=create&actionType="+actionName,
+		type: "GET",
+		dataType: "json",
+		success: function (response) {  
+			console.log("completed"+response);
+			alert(response); 
+		}, 
+		error: function (response) {
+			console.log("failed");
+		}
+	});
+}
 
 jQuery('#submitButton').click(function(e){
-	 alert("hi.....");
 	 if(jQuery('#digSignDetailsTab').find('input[type=checkbox]:checked').length == 0) 
 	    {
 	        alert('Please select atleast one checkbox');
 	        return false;
 	    }
 	 else {
-		 alert("submitt under progress");
+			var tbl=document.getElementById("digSignDetailsTab");
+		    var lastRow = (tbl.rows.length)-1;
+		    var idArray = new Array() ; 
+		    var j=0;
+		    for(var i=1;i<=lastRow;i++){
+			    if(getControlInBranch(tbl.rows[i],'rowCheckBox').checked){
+			    	idArray[j++]=getControlInBranch(tbl.rows[i],'objectId').value;
+				} 
+		    } 
+		    jQuery.ajax({
+				url: "/ptis/notice/propertyTaxNotice-generateBulkNotice.action?basicPropertyIds="+idArray.toString(),
+				type: "GET",
+				dataType: "json",
+				success: function (response) {
+					alert("Selected Records Signed Successfully.");
+				}, 
+				error: function (response) {
+					alert("Unable to Sign Selected Records.");
+					console.log("failed");
+				}
+			});
 	 } 
 });
-
-
-jQuery('#previewButn').click(function(e){
-		 alert("preview work under progress");
-}); 
-
-jQuery('#signButn').click(function(e){
-	 alert("digital signature work under progress");
-});
-
-
-

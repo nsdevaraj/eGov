@@ -24,16 +24,16 @@
  *     In addition to the terms of the GPL license to be adhered to in using this
  *     program, the following additional terms are to be complied with:
  *
- * 	1) All versions of this program, verbatim or modified must carry this
- * 	   Legal Notice.
+ *      1) All versions of this program, verbatim or modified must carry this
+ *         Legal Notice.
  *
- * 	2) Any misrepresentation of the origin of the material is prohibited. It
- * 	   is required that all modified versions of this material be marked in
- * 	   reasonable ways as different from the original version.
+ *      2) Any misrepresentation of the origin of the material is prohibited. It
+ *         is required that all modified versions of this material be marked in
+ *         reasonable ways as different from the original version.
  *
- * 	3) This license does not grant any rights to any user of the program
- * 	   with regards to rights under trademark law for use of the trade names
- * 	   or trademarks of eGovernments Foundation.
+ *      3) This license does not grant any rights to any user of the program
+ *         with regards to rights under trademark law for use of the trade names
+ *         or trademarks of eGovernments Foundation.
  *
  *   In case of any queries, you can reach eGovernments Foundation at contact@egovernments.org.
  ******************************************************************************/
@@ -124,12 +124,16 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     private PropertyService propService;
     final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     private String actionType;
+    private String basicPropertyIds;
     
     @Autowired
     private DesignationService designationService;
 
     @Autowired
     private PtDemandDao ptDemandDAO;
+    
+   
+
 
     public PropertyTaxNoticeAction() {
     }
@@ -137,6 +141,70 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     @Override
     public StateAware getModel() {
         return null;
+    }
+    
+    /**
+     * @return
+     */
+    @Action(value = "/notice/propertyTaxNotice-generateBulkNotice")
+    public String generateBulkNotice() {
+        final Map<String, Object> reportParams = new HashMap<String, Object>();
+        noticeType = PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE;
+        ReportRequest reportInput = null;
+        BasicPropertyImpl basicProperty = null;
+        String idList[]= basicPropertyIds.split(",");  
+        if(idList.length!=0){
+            for(int i=0;i<idList.length;i++){
+                basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
+                        QUERY_BASICPROPERTY_BY_BASICPROPID, Long.valueOf(idList[i]));  
+                property = (PropertyImpl) basicProperty.getProperty();
+
+                if (property == null)
+                    property = (PropertyImpl) basicProperty.getWFProperty();
+                
+                PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(noticeType, property.getApplicationNo());
+                ReportOutput reportOutput = new ReportOutput();
+                if (notice == null) {
+                    PropertyNoticeInfo propertyNotice = null;
+                    String noticeNo = null;
+                    noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
+                    propertyNotice = new PropertyNoticeInfo(property, noticeNo);
+
+                    if (PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE.equals(noticeType)) {
+                        final HttpServletRequest request = ServletActionContext.getRequest();
+                        final String url = WebUtils.extractRequestDomainURL(request, false);
+                        final String imagePath = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
+                                (String) request.getSession().getAttribute("citylogo"));
+                        final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
+                        reportParams.put("logoPath", imagePath);
+                        reportParams.put("cityName", cityName);
+                        reportParams.put("mode", "create");
+                        reportParams.put("actionType", "Sign");
+                        setNoticeInfo(propertyNotice, basicProperty);
+                        if (StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage())) {
+                            reportParams.put("unauthorizedProperty", "yes");
+                        } else {
+                            reportParams.put("unauthorizedProperty", "no");
+                        }
+                        final List<PropertyAckNoticeInfo> floorDetails = getFloorDetailsForNotice(propertyNotice.getOwnerInfo()
+                                .getTotalTax());
+                        propertyNotice.setFloorDetailsForNotice(floorDetails);
+                        reportInput = new ReportRequest(PropertyTaxConstants.REPORT_TEMPLATENAME_SPECIAL_NOTICE, propertyNotice,
+                                reportParams);
+                    }
+                    reportInput.setPrintDialogOnOpenReport(true);
+                    reportInput.setReportFormat(FileFormat.PDF);
+                    reportOutput = reportService.createReport(reportInput);
+                    if (reportOutput != null && reportOutput.getReportOutputData() != null)
+                        NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
+                     noticeService.saveNotice(basicProperty.getPropertyForBasicProperty().getApplicationNo(),noticeNo, noticeType, basicProperty, NoticePDF);
+                     transitionWorkFlow(property);
+                } 
+                    propService.updateIndexes(property, APPLICATION_TYPE_ALTER_ASSESSENT);
+                    basicPropertyService.update(basicProperty);
+            }
+        }
+        return SUCCESS; 
     }
 
     @Action(value = "/notice/propertyTaxNotice-generateNotice")
@@ -264,9 +332,9 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
                             .equalsIgnoreCase(PropertyTaxConstants.DEMANDRSN_CODE_VACANT_TAX))
                 ownerInfo.setGeneralTax(demandDetail.getAmount());
             if(StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage())){
-            	if (demandDetail.getEgDemandReason().getEgDemandReasonMaster().getCode()
+                if (demandDetail.getEgDemandReason().getEgDemandReasonMaster().getCode()
                         .equalsIgnoreCase(PropertyTaxConstants.DEMANDRSN_CODE_UNAUTHORIZED_PENALTY))
-            		ownerInfo.setUnauthorizedPenalty(demandDetail.getAmount());
+                        ownerInfo.setUnauthorizedPenalty(demandDetail.getAmount());
             }
         }
         ownerInfo.setTotalTax(totalTax);
@@ -390,6 +458,14 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
 
     public void setActionType(String actionType) {
         this.actionType = actionType;
+    }
+
+    public String getBasicPropertyIds() {
+        return basicPropertyIds;
+    }
+
+    public void setBasicPropertyIds(String basicPropertyIds) {
+        this.basicPropertyIds = basicPropertyIds;
     }
 
 }

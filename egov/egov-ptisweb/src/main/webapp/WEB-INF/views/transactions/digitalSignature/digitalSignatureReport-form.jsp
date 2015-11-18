@@ -40,7 +40,8 @@
 <%@ page contentType="text/html" language="java"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@ taglib uri="http://www.springframework.org/tags/form" prefix="form"%>
-<%@ taglib uri="http://www.springframework.org/tags" prefix="spring"%>
+<%@ taglib uri="http://www.springframework.org/tags" prefix="spring"%>  
+
 	
 <html>
 <title>Digital Signature</title>
@@ -90,7 +91,7 @@
 								<tr id="digSignInfo">
 								
 									<td class="blueborderfortd">
-										<input type="checkbox" id="rowCheckBox"/>
+										<input type="checkbox" id="rowCheckBox" name="rowCheckBox"/>
 									</td>
 								
 									<td class="blueborderfortd" >	
@@ -113,7 +114,7 @@
 						 			</td>
 						 			
 						 			<td class="blueborderfortd" >	
-										 <span class="add-padding"><button type="button" id="previewButn" class="btn">Preview</button></span><span class="add-padding"><button type="button btn" id="signButn" class="btn">Sign</button></span>
+										 <span class="add-padding"><button type="button" id="previewButn" onclick="callPreview(this);" class="btn">Preview</button></span><span class="add-padding"><button type="button btn" id="signButn" onclick="generateNotice(this,'Sign')" class="btn">Sign</button></span>
 						 			</td>
 								</tr>
 							</c:forEach>
@@ -123,14 +124,15 @@
 						</table>
 
 						<div class="text-center">
-							<button type="submit" class="btn btn-primary" id="submitButton">Submit</button>
-							<a href="javascript:void(0)" class="btn btn-default" onclick="self.close()">Close</a>
+							<button type="button" class="btn btn-primary" id="submitButton">Submit</button>
+							<a href="javascript:void(0)" class="btn btn-default" onclick="self.close()">Close</a> 
 						</div> 
 					</div>
 				</div>
-			</div>
+			</div> 
 			</div>
 				</form:form>
 				<script type="text/javascript" src="<c:url value='/resources/js/app/digitalSignatureReport.js'/>"></script>  
+				<script src="<c:url value='/resources/javascript/helper.js' context='/ptis'/>"></script>
 			</body>
 </html>	
