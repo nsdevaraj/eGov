@@ -124,9 +124,13 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     private PropertyService propService;
     final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     private String actionType;
+<<<<<<< HEAD
     
     @Autowired
     private DesignationService designationService;
+=======
+    private String basicPropertyIds;
+>>>>>>> PHOENIX-1533 Screen for Listing documents to be digitally signed (Notice
 
     @Autowired
     private PtDemandDao ptDemandDAO;
@@ -137,6 +141,71 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     @Override
     public StateAware getModel() {
         return null;
+    }
+    
+    
+    /**
+     * @return
+     */
+    @Action(value = "/notice/propertyTaxNotice-generateBulkNotice")
+    public String generateBulkNotice() {
+        final Map<String, Object> reportParams = new HashMap<String, Object>();
+        noticeType = PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE;
+        ReportRequest reportInput = null;
+        BasicPropertyImpl basicProperty = null;
+        String idList[]= basicPropertyIds.split(",");  
+        if(idList.length!=0){
+            for(int i=0;i<idList.length;i++){
+                basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
+                        QUERY_BASICPROPERTY_BY_BASICPROPID, Long.valueOf(idList[i]));  
+                property = (PropertyImpl) basicProperty.getProperty();
+
+                if (property == null)
+                    property = (PropertyImpl) basicProperty.getWFProperty();
+                
+                PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(noticeType, property.getApplicationNo());
+                ReportOutput reportOutput = new ReportOutput();
+                if (notice == null) {
+                    PropertyNoticeInfo propertyNotice = null;
+                    String noticeNo = null;
+                    noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
+                    propertyNotice = new PropertyNoticeInfo(property, noticeNo);
+
+                    if (PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE.equals(noticeType)) {
+                        final HttpServletRequest request = ServletActionContext.getRequest();
+                        final String url = WebUtils.extractRequestDomainURL(request, false);
+                        final String imagePath = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
+                                (String) request.getSession().getAttribute("citylogo"));
+                        final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
+                        reportParams.put("logoPath", imagePath);
+                        reportParams.put("cityName", cityName);
+                        reportParams.put("mode", "create");
+                        reportParams.put("actionType", "Sign");
+                        setNoticeInfo(propertyNotice, basicProperty);
+                        if (StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage())) {
+                            reportParams.put("unauthorizedProperty", "yes");
+                        } else {
+                            reportParams.put("unauthorizedProperty", "no");
+                        }
+                        final List<PropertyAckNoticeInfo> floorDetails = getFloorDetailsForNotice(propertyNotice.getOwnerInfo()
+                                .getTotalTax());
+                        propertyNotice.setFloorDetailsForNotice(floorDetails);
+                        reportInput = new ReportRequest(PropertyTaxConstants.REPORT_TEMPLATENAME_SPECIAL_NOTICE, propertyNotice,
+                                reportParams);
+                    }
+                    reportInput.setPrintDialogOnOpenReport(true);
+                    reportInput.setReportFormat(FileFormat.PDF);
+                    reportOutput = reportService.createReport(reportInput);
+                    if (reportOutput != null && reportOutput.getReportOutputData() != null)
+                        NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
+                     noticeService.saveNotice(basicProperty.getPropertyForBasicProperty().getApplicationNo(),noticeNo, noticeType, basicProperty, NoticePDF);
+                     transitionWorkFlow(property);
+                } 
+                    propService.updateIndexes(property, APPLICATION_TYPE_ALTER_ASSESSENT);
+                    basicPropertyService.update(basicProperty);
+            }
+        }
+        return SUCCESS; 
     }
 
     @Action(value = "/notice/propertyTaxNotice-generateNotice")
@@ -201,6 +270,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
                 transitionWorkFlow(property);
             }
         } else {
+            
             final FileStoreMapper fsm = notice.getFileStore();
             final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
             byte[] bFile;
@@ -390,6 +460,14 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
 
     public void setActionType(String actionType) {
         this.actionType = actionType;
+    }
+
+    public String getBasicPropertyIds() {
+        return basicPropertyIds;
+    }
+
+    public void setBasicPropertyIds(String basicPropertyIds) {
+        this.basicPropertyIds = basicPropertyIds;
     }
 
 }
