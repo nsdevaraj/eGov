@@ -42,7 +42,6 @@ public class DigitalSignatureReportController {
     public String searchForm(final Model model) {
         final List<HashMap<String, Object>> resultList = getRecordsForDigitalSignature();
         model.addAttribute("digitalSignatureReportList", resultList);
-        model.addAttribute("noticeType", PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE);
         return DIGITAL_SIGNATURE_REPORT_FORM;
     }
 
