@@ -53,16 +53,16 @@ function callPreview(obj){
 		   		    'width='+screen.width,
 		   		    'fullscreen=yes' 
 		   		].join(',');
-		var noticeType='${noticeType}';  
-			   	window.open("../notice/propertyTaxNotice-generateNotice.action?basicPropId="+basicPropertyId+"&noticeType="+noticeType+"noticeMode=create&actionType="+actionName, "NoticeWindow", params);
-			   	return false; 
+	var noticeType='Special Notice';  
+   	window.open("../notice/propertyTaxNotice-generateNotice.action?basicPropId="+basicPropertyId+"&noticeType="+noticeType+"&noticeMode=create&actionType="+actionName, "NoticeWindow", params);
+   	return false; 
 }
 
 function generateNotice(obj,actionName){
 	var rowobj=getRow(obj);
 	var tbl = document.getElementById('digSignDetailsTab');
 	var basicPropertyId=getControlInBranch(tbl.rows[rowobj.rowIndex],'objectId').value;
-		var noticeType = '${noticeType}';  
+	var noticeType = 'Special Notice';  
 
 	jQuery.ajax({
 		url: "/ptis/notice/propertyTaxNotice-generateNotice.action?basicPropId="+basicPropertyId+"&noticeType="+noticeType+"&noticeMode=create&actionType="+actionName,

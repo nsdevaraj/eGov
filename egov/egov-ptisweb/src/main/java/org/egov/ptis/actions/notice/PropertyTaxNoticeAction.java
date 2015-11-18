@@ -79,6 +79,7 @@ import org.egov.infra.reporting.engine.ReportOutput;
 import org.egov.infra.reporting.engine.ReportRequest;
 import org.egov.infra.reporting.engine.ReportService;
 import org.egov.infra.reporting.viewer.ReportViewerUtil;
+import org.egov.infra.utils.EgovThreadLocals;
 import org.egov.infra.web.utils.WebUtils;
 import org.egov.infra.workflow.entity.StateAware;
 import org.egov.infstr.services.PersistenceService;
@@ -104,6 +105,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @ParentPackage("egov")
 @Results({ @Result(name = PropertyTaxNoticeAction.NOTICE, location = "propertyTaxNotice-notice.jsp") })
 public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
+    private static final String DIGITAL_SIGNATURE_REDIRECTION = "digitalSignatureRedirection";
     private static final String PREVIEW = "Preview";
     /**
      *
@@ -125,6 +127,8 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     private String actionType;
     private String basicPropertyIds;
+    private String fileStoreIds;
+    private String ulbCode;
     
     @Autowired
     private DesignationService designationService;
@@ -132,9 +136,6 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     @Autowired
     private PtDemandDao ptDemandDAO;
     
-   
-
-
     public PropertyTaxNoticeAction() {
     }
 
@@ -148,6 +149,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
      */
     @Action(value = "/notice/propertyTaxNotice-generateBulkNotice")
     public String generateBulkNotice() {
+        setUlbCode(EgovThreadLocals.getCityCode());
         final Map<String, Object> reportParams = new HashMap<String, Object>();
         noticeType = PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE;
         ReportRequest reportInput = null;
@@ -164,6 +166,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
                 
                 PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(noticeType, property.getApplicationNo());
                 ReportOutput reportOutput = new ReportOutput();
+                StringBuffer fileIds = new StringBuffer();
                 if (notice == null) {
                     PropertyNoticeInfo propertyNotice = null;
                     String noticeNo = null;
@@ -197,18 +200,21 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
                     reportOutput = reportService.createReport(reportInput);
                     if (reportOutput != null && reportOutput.getReportOutputData() != null)
                         NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
-                     noticeService.saveNotice(basicProperty.getPropertyForBasicProperty().getApplicationNo(),noticeNo, noticeType, basicProperty, NoticePDF);
-                     transitionWorkFlow(property);
+                    PtNotice savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty().getApplicationNo(),noticeNo, noticeType, basicProperty, NoticePDF);
+                    if (fileIds != null) {
+                        fileIds.append(",");
+                    }
+                    fileIds.append(savedNotice.getFileStore().getId());
                 } 
-                    propService.updateIndexes(property, APPLICATION_TYPE_ALTER_ASSESSENT);
-                    basicPropertyService.update(basicProperty);
+                setFileStoreIds(fileIds.toString());
             }
         }
-        return SUCCESS; 
+        return DIGITAL_SIGNATURE_REDIRECTION; 
     }
 
     @Action(value = "/notice/propertyTaxNotice-generateNotice")
     public String generateNotice() {
+        setUlbCode(EgovThreadLocals.getCityCode());
         final Map<String, Object> reportParams = new HashMap<String, Object>();
         ReportRequest reportInput = null;
         final BasicPropertyImpl basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
@@ -265,8 +271,10 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             if (reportOutput != null && reportOutput.getReportOutputData() != null)
                 NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
             if (!PREVIEW.equals(actionType)) {
-                noticeService.saveNotice(basicProperty.getPropertyForBasicProperty().getApplicationNo(),noticeNo, noticeType, basicProperty, NoticePDF);
-                transitionWorkFlow(property);
+                PtNotice savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty().getApplicationNo(),noticeNo, noticeType, basicProperty, NoticePDF);
+                setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                //transitionWorkFlow(property);
+                return DIGITAL_SIGNATURE_REDIRECTION;
             }
         } else {
             final FileStoreMapper fsm = notice.getFileStore();
@@ -466,6 +474,22 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
 
     public void setBasicPropertyIds(String basicPropertyIds) {
         this.basicPropertyIds = basicPropertyIds;
+    }
+
+    public String getFileStoreIds() {
+        return fileStoreIds;
+    }
+
+    public void setFileStoreIds(String fileStoreIds) {
+        this.fileStoreIds = fileStoreIds;
+    }
+
+    public String getUlbCode() {
+        return ulbCode;
+    }
+
+    public void setUlbCode(String ulbCode) {
+        this.ulbCode = ulbCode;
     }
 
 }

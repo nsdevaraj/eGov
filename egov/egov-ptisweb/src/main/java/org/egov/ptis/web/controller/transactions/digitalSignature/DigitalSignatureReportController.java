@@ -1,5 +1,7 @@
 package org.egov.ptis.web.controller.transactions.digitalSignature;
 
+import static org.egov.ptis.constants.PropertyTaxConstants.PTMODULENAME;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +14,7 @@ import org.egov.infra.workflow.entity.StateAware;
 import org.egov.infra.workflow.entity.WorkflowTypes;
 import org.egov.infra.workflow.inbox.InboxRenderServiceDeligate;
 import org.egov.ptis.constants.PropertyTaxConstants;
+import org.egov.ptis.domain.entity.property.PropertyImpl;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -46,9 +49,11 @@ public class DigitalSignatureReportController {
         return DIGITAL_SIGNATURE_REPORT_FORM;
     }
 
+    @SuppressWarnings("unchecked")
     public List<HashMap<String, Object>> getRecordsForDigitalSignature() {
         final List<HashMap<String, Object>> resultList = new ArrayList<HashMap<String, Object>>();
         final List<StateAware> stateAwareList = fetchItems();
+
         if (null != stateAwareList && !stateAwareList.isEmpty()) {
             HashMap<String, Object> tempMap = new HashMap<String, Object>();
             WorkflowTypes workflowTypes = null;
@@ -56,7 +61,7 @@ public class DigitalSignatureReportController {
             for (final StateAware record : stateAwareList)
                 if (record != null)
                     if (record.getState() != null &&
-                    record.getState().getNextAction().equalsIgnoreCase(PropertyTaxConstants.DIGITAL_SIGNATURE_PENDING)) {
+                            record.getState().getNextAction().equalsIgnoreCase(PropertyTaxConstants.DIGITAL_SIGNATURE_PENDING)) {
                         tempMap = new HashMap<String, Object>();
                         workflowTypesList = getCurrentSession().getNamedQuery(WorkflowTypes.WF_TYPE_BY_TYPE_AND_RENDER_Y)
                                 .setString(0, record.getStateType()).list();
@@ -64,14 +69,19 @@ public class DigitalSignatureReportController {
                             workflowTypes = workflowTypesList.get(0);
                         else
                             workflowTypes = null;
-                        tempMap.put("objectId", record.getId());
-                        tempMap.put("type", workflowTypes != null ? workflowTypes.getDisplayName() : null);
-                        tempMap.put("module", workflowTypes != null ? workflowTypes.getModule().getDisplayName() : null);
-                        tempMap.put("details", record.getStateDetails());
-                        resultList.add(tempMap);
+                        if (PTMODULENAME.equalsIgnoreCase(workflowTypes.getModule().getName())) {
+                            if ("org.egov.ptis.domain.entity.property.PropertyImpl".equals(record.getClass().getName())) {
+                                tempMap.put("objectId", ((PropertyImpl) record).getBasicProperty().getId());
+                            } else {
+                                tempMap.put("objectId", record.getId());
+                            }
+                            tempMap.put("type", workflowTypes != null ? workflowTypes.getDisplayName() : null);
+                            tempMap.put("module", workflowTypes != null ? workflowTypes.getModule().getDisplayName() : null);
+                            tempMap.put("details", record.getStateDetails());
+                            resultList.add(tempMap);
+                        }
                     }
         }
-
         return resultList;
     }
 
