@@ -42,6 +42,7 @@
  */
 package org.egov.ptis.actions.objection;
 
+import static org.egov.ptis.constants.PropertyTaxConstants.COMMISSIONER_DESGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.CURR_DMD_STR;
 import static org.egov.ptis.constants.PropertyTaxConstants.DEVIATION_PERCENTAGE;
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
@@ -168,9 +169,11 @@ import org.springframework.beans.factory.annotation.Autowired;
         @Result(name = "message", location = "revisionPetition-message.jsp"),
         @Result(name = "notice", location = "revisionPetition-notice.jsp"),
         @Result(name = "view", location = "revisionPetition-view.jsp"),
-        @Result(name = RevisionPetitionAction.COMMON_FORM, location = "search/searchProperty-commonForm.jsp") })
+        @Result(name = RevisionPetitionAction.COMMON_FORM, location = "search/searchProperty-commonForm.jsp"),
+        @Result(name = RevisionPetitionAction.DIGITAL_SIGNATURE_REDIRECTION, location = "revisionPetition-digitalSignatureRedirection.jsp")})
 public class RevisionPetitionAction extends PropertyTaxBaseAction {
 
+    protected static final String DIGITAL_SIGNATURE_REDIRECTION = "digitalSignatureRedirection";
     private static final long serialVersionUID = 1L;
     protected static final String COMMON_FORM = "commonForm";
     private final String REJECTED = "Rejected";
@@ -251,6 +254,8 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
     private MessagingService messagingService;
     private SMSEmailService sMSEmailService;
     private String actionType;
+    private String fileStoreIds;
+    private String ulbCode;
 
     public RevisionPetitionAction() {
 
@@ -690,9 +695,12 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
         String noticeNo = null;
         PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_SPECIAL_NOTICE,
                 objection.getObjectionNumber());
+        final List<User> users = eisCommonService.getAllActiveUsersByGivenDesig(designationService.getDesignationByName(
+                COMMISSIONER_DESGN).getId());
+        reportParams.put("userId", !users.isEmpty() ? users.get(0).getId() : 0);
         ReportOutput reportOutput = new ReportOutput();
         if (notice == null) {
-            if (!PREVIEW.equalsIgnoreCase(actionType)) {
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
                 noticeNo = propertyTaxNumberGenerator
                         .generateNoticeNumber(NOTICE_TYPE_SPECIAL_NOTICE);
             }
@@ -719,11 +727,12 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
 
             if (reportOutput != null && reportOutput.getReportOutputData() != null)
                 specialNoticePdf = new ByteArrayInputStream(reportOutput.getReportOutputData());
-            if (!PREVIEW.equals(actionType)) {
-                noticeService.saveNotice(objection.getObjectionNumber(),
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+                final PtNotice savedNotice = noticeService.saveNotice(objection.getObjectionNumber(),
                         objection.getObjectionNumber().concat(
                                 PropertyTaxConstants.NOTICE_TYPE_REVISIONPETITION_SPECIALNOTICE_PREFIX),
                         PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE, objection.getBasicProperty(), specialNoticePdf);
+                setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
             } else {
                 getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
                 reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
@@ -924,7 +933,7 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
     @ValidationErrorPage(value = "view")
     @Action(value = "/revPetition/revPetition-generateSpecialNotice")
     public String generateSpecialNotice() {
-
+        setUlbCode(EgovThreadLocals.getCityCode());
         if (PREVIEW.equalsIgnoreCase(actionType)) {
             objection = revisionPetitionService.findById(Long.valueOf(parameters.get("objectionId")[0]), false);
         }
@@ -952,13 +961,17 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
                 objection.end().withStateValue(PropertyTaxConstants.WFLOW_ACTION_END).withOwner(position).withOwner(user)
                         .withComments(approverComments);
             } else {
-                updateStateAndStatus(objection);
+                if (!WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+                    updateStateAndStatus(objection);
+                }
             }
         }
 
         generateSpecialNotice(objection.getProperty(), (BasicPropertyImpl) objection.getBasicProperty());
 
-        revisionPetitionService.updateRevisionPetition(objection);
+        if (!WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+            revisionPetitionService.updateRevisionPetition(objection);
+        }
         if (!PREVIEW.equalsIgnoreCase(actionType)) {
             getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
         }
@@ -981,10 +994,13 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
                 }
                 reportOutput.setReportOutputData(bFile);
                 reportOutput.setReportFormat(FileFormat.PDF);
-                reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
+                if (!WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+                    reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
+                }
             }
         }
-        return NOTICE;
+        
+        return WFLOW_ACTION_STEP_SIGN.equals(actionType) ? DIGITAL_SIGNATURE_REDIRECTION : NOTICE;
     }
 
     /**
@@ -1780,6 +1796,22 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
 
     public void setActionType(String actionType) {
         this.actionType = actionType;
+    }
+
+    public String getFileStoreIds() {
+        return fileStoreIds;
+    }
+
+    public void setFileStoreIds(String fileStoreIds) {
+        this.fileStoreIds = fileStoreIds;
+    }
+
+    public String getUlbCode() {
+        return ulbCode;
+    }
+
+    public void setUlbCode(String ulbCode) {
+        this.ulbCode = ulbCode;
     }
 
 }

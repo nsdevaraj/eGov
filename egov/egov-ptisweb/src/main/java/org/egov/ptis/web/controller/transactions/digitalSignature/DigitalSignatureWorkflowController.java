@@ -39,28 +39,41 @@
  ******************************************************************************/
 package org.egov.ptis.web.controller.transactions.digitalSignature;
 
+import static org.egov.ptis.constants.PropertyTaxConstants.ADDTIONAL_RULE_ALTER_ASSESSMENT;
+import static org.egov.ptis.constants.PropertyTaxConstants.ADDTIONAL_RULE_BIFURCATE_ASSESSMENT;
+import static org.egov.ptis.constants.PropertyTaxConstants.ADDTIONAL_RULE_PROPERTY_TRANSFER;
+import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_ALTER_ASSESSENT;
+import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_BIFURCATE_ASSESSENT;
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_NEW_ASSESSENT;
+import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_TRANSFER_OF_OWNERSHIP;
+import static org.egov.ptis.constants.PropertyTaxConstants.DEMOLITION;
+import static org.egov.ptis.constants.PropertyTaxConstants.NEW_ASSESSMENT;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.servlet.http.HttpServletRequest;
 
 import org.egov.eis.entity.Assignment;
 import org.egov.eis.service.AssignmentService;
 import org.egov.infra.admin.master.entity.User;
 import org.egov.infra.security.utils.SecurityUtils;
+import org.egov.infra.workflow.entity.StateAware;
 import org.egov.infra.workflow.service.SimpleWorkflowService;
-import org.egov.infstr.services.PersistenceService;
 import org.egov.infstr.workflow.WorkFlowMatrix;
 import org.egov.pims.commons.Position;
+import org.egov.ptis.constants.PropertyTaxConstants;
+import org.egov.ptis.domain.entity.objection.RevisionPetition;
 import org.egov.ptis.domain.entity.property.BasicProperty;
 import org.egov.ptis.domain.entity.property.PropertyImpl;
+import org.egov.ptis.domain.entity.property.PropertyMutation;
+import org.egov.ptis.domain.service.property.PropertyPersistenceService;
 import org.egov.ptis.domain.service.property.PropertyService;
+import org.egov.ptis.domain.service.revisionPetition.RevisionPetitionService;
 import org.elasticsearch.common.joda.time.DateTime;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -71,6 +84,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 @RequestMapping(value = "/digitalSignature")
 public class DigitalSignatureWorkflowController {
+
+    private static final String STR_DEMOLITION = "Demolition";
+
+    private static final String BIFURCATE = "Bifurcate";
+
+    private static final String ALTER = "Alter";
+
+    private static final String CREATE = "Create";
 
     private static final String DIGITAL_SIGNATURE_SUCCESS = "digitalSignature-success";
 
@@ -89,58 +110,120 @@ public class DigitalSignatureWorkflowController {
     @Autowired
     private SimpleWorkflowService<PropertyImpl> propertyWorkflowService;
 
-    private PersistenceService<BasicProperty, Long> basicPropertyService;
+    @Autowired
+    private PropertyPersistenceService basicPropertyService;
 
-    @RequestMapping(value = "/propertyTax/transitionWorkflow/{fileStoreIds}")
-    public String transitionWorkflow(final Model model, @PathVariable final String fileStoreIds) {
+    @Autowired
+    private RevisionPetitionService revisionPetitionService;
+
+    @Autowired
+    private SimpleWorkflowService<PropertyMutation> transferWorkflowService;
+
+    @Autowired
+    protected SimpleWorkflowService<RevisionPetition> revisionPetitionWorkFlowService;
+
+    @RequestMapping(value = "/propertyTax/transitionWorkflow")
+    public String transitionWorkflow(final HttpServletRequest request, final Model model) {
+        final String fileStoreIds = request.getParameter("fileStoreId");
         final String[] fileStoreId = fileStoreIds.split(",");
         for (final String id : fileStoreId) {
-            final BasicProperty basicProperty = (BasicProperty) getCurrentSession()
-                    .createQuery("select basicProperty from PtNotice where fileStore.fileStoreId = :id").setParameter("id", id)
+            final String applicationNumber = (String) getCurrentSession()
+                    .createQuery("select notice.applicationNumber from PtNotice notice where notice.fileStore.fileStoreId = :id")
+                    .setParameter("id", id)
                     .uniqueResult();
-            final PropertyImpl property = basicProperty.getActiveProperty();
-            transitionWorkFlow(property);
-            propertyService.updateIndexes(property, APPLICATION_TYPE_NEW_ASSESSENT);
-            basicPropertyService.update(basicProperty);
+            final PropertyImpl property = (PropertyImpl) getCurrentSession()
+                    .createQuery("from PropertyImpl where applicationNo = :applicationNo")
+                    .setParameter("applicationNo", applicationNumber).uniqueResult();
+            if (property != null) {
+                final BasicProperty basicProperty = property.getBasicProperty();
+                final String applicationType = transitionWorkFlow(property);
+                propertyService.updateIndexes(property, getTypeForUpdateIndexes(applicationType));
+                basicPropertyService.update(basicProperty);
+            } else {
+                final RevisionPetition revisionPetition = (RevisionPetition) getCurrentSession()
+                        .createQuery("from RevisionPetition where objectionNumber = :applicationNo")
+                        .setParameter("applicationNo", applicationNumber).uniqueResult();
+                if (revisionPetition != null) {
+                    transitionWorkFlow(revisionPetition);
+                    propertyService.updateIndexes(revisionPetition, PropertyTaxConstants.APPLICATION_TYPE_REVISION_PETITION);
+                    revisionPetitionService.updateRevisionPetition(revisionPetition);
+                } else {
+                    final PropertyMutation propertyMutation = (PropertyMutation) getCurrentSession()
+                            .createQuery("from PropertyMutation where applicationNo = :applicationNo")
+                            .setParameter("applicationNo", applicationNumber).uniqueResult();
+                    if (propertyMutation != null) {
+                        final BasicProperty basicProperty = propertyMutation.getBasicProperty();
+                        transitionWorkFlow(propertyMutation);
+                        propertyService.updateIndexes(propertyMutation, APPLICATION_TYPE_TRANSFER_OF_OWNERSHIP);
+                        basicPropertyService.persist(basicProperty);
+                    }
+                }
+            }
         }
         model.addAttribute("successMessage", "Digitally Signed Successfully");
         return DIGITAL_SIGNATURE_SUCCESS;
     }
 
-    private void transitionWorkFlow(final PropertyImpl property) {
+    private String getTypeForUpdateIndexes(final String applicationType) {
+        return applicationType.equals(NEW_ASSESSMENT) ? APPLICATION_TYPE_NEW_ASSESSENT : applicationType
+                .equals(ADDTIONAL_RULE_ALTER_ASSESSMENT) ? APPLICATION_TYPE_ALTER_ASSESSENT : applicationType
+                        .equals(ADDTIONAL_RULE_BIFURCATE_ASSESSMENT) ? APPLICATION_TYPE_BIFURCATE_ASSESSENT
+                                : applicationType.equals(DEMOLITION) ? PropertyTaxConstants.APPLICATION_TYPE_DEMOLITION : null;
+    }
+
+    private String transitionWorkFlow(final PropertyImpl property) {
         final User user = securityUtils.getCurrentUser();
         final DateTime currentDate = new DateTime();
         final Position pos = getWorkflowInitiator(property).getPosition();
+        final String applicationType = property.getCurrentState().getValue().startsWith(CREATE) ? NEW_ASSESSMENT : property
+                .getCurrentState().getValue().startsWith(ALTER) ? ADDTIONAL_RULE_ALTER_ASSESSMENT
+                        : property.getCurrentState().getValue().startsWith(BIFURCATE) ? ADDTIONAL_RULE_BIFURCATE_ASSESSMENT : property
+                                .getCurrentState().getValue().startsWith(STR_DEMOLITION) ? DEMOLITION : null;
         final WorkFlowMatrix wfmatrix = propertyWorkflowService.getWfMatrix(property.getStateType(), null,
-                null, APPLICATION_TYPE_NEW_ASSESSENT, property.getCurrentState().getValue(), null);
+                null, applicationType, property.getCurrentState().getValue(), null);
         property.transition(true).withSenderName(user.getName())
-                .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
-                .withNextAction(wfmatrix.getNextAction());
+        .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
+        .withNextAction(wfmatrix.getNextAction());
+        return applicationType;
     }
 
-    private Assignment getWorkflowInitiator(final PropertyImpl property) {
+    private void transitionWorkFlow(final StateAware revPetition) {
+        final User user = securityUtils.getCurrentUser();
+        final Position pos = getWorkflowInitiator(revPetition).getPosition();
+        final WorkFlowMatrix wfmatrix = revisionPetitionWorkFlowService.getWfMatrix(revPetition.getStateType(), null, null,
+                null, revPetition.getCurrentState().getValue(), null);
+        revPetition.transition(true).withStateValue(wfmatrix.getNextState()).withOwner(pos)
+        .withSenderName(user.getName()).withDateInfo(new DateTime().toDate())
+        .withNextAction(wfmatrix.getNextAction());
+    }
+
+    public void transitionWorkFlow(final PropertyMutation propertyMutation) {
+        final DateTime currentDate = new DateTime();
+        final User user = securityUtils.getCurrentUser();
+        final Assignment wfInitiator = getWorkflowInitiator(propertyMutation);
+        final Position pos = wfInitiator.getPosition();
+        final WorkFlowMatrix wfmatrix = transferWorkflowService.getWfMatrix(propertyMutation.getStateType(),
+                null, null, ADDTIONAL_RULE_PROPERTY_TRANSFER, propertyMutation.getCurrentState().getValue(), null);
+        propertyMutation.transition(true).withSenderName(user.getName())
+        .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
+        .withNextAction(wfmatrix.getNextAction());
+    }
+
+    private Assignment getWorkflowInitiator(final StateAware state) {
         Assignment wfInitiator;
-        if (propertyService.isEmployee(property.getCreatedBy()))
-            wfInitiator = assignmentService.getPrimaryAssignmentForUser(property.getCreatedBy().getId());
-        else if (!property.getStateHistory().isEmpty())
-            wfInitiator = assignmentService.getPrimaryAssignmentForPositon(property.getStateHistory().get(0)
-                    .getOwnerPosition().getId());
+        if (propertyService.isEmployee(state.getCreatedBy()))
+            wfInitiator = assignmentService.getPrimaryAssignmentForUser(state.getCreatedBy().getId());
+        else if (!state.getStateHistory().isEmpty())
+            wfInitiator = assignmentService.getPrimaryAssignmentForPositon(state.getStateHistory()
+                    .get(0).getOwnerPosition().getId());
         else
-            wfInitiator = assignmentService.getPrimaryAssignmentForPositon(property.getState().getOwnerPosition()
-                    .getId());
+            wfInitiator = assignmentService.getPrimaryAssignmentForPositon(state.getState()
+                    .getOwnerPosition().getId());
         return wfInitiator;
     }
 
     private Session getCurrentSession() {
         return entityManager.unwrap(Session.class);
-    }
-
-    public PersistenceService<BasicProperty, Long> getBasicPropertyService() {
-        return basicPropertyService;
-    }
-
-    public void setBasicPropertyService(final PersistenceService<BasicProperty, Long> basicPropertyService) {
-        this.basicPropertyService = basicPropertyService;
     }
 
 }

@@ -41,7 +41,7 @@
 <%@ page language="java" pageEncoding="UTF-8"%>
 <html>
 	<head>
-		<title>Digital Signature</title>
+		<title><s:text name="property.tax.collection" /></title>
 		<script type="text/javascript">
 
 	 	jQuery(document).ready( function() {
@@ -56,16 +56,16 @@
 			    name: 'fileStoreId',
 			    value: fileStoreIds
 			})).appendTo( document.body )
-			.appendTo(document.body).submit();
-			/* 
-	 		var ulbCode = '<s:property value="%{ulbCode}" />';
+			.appendTo(document.body).submit(); 
+			/* var ulbCode = '<s:property value="%{ulbCode}" />';
 	 		var callBackUrl = '/ptis/digitalSignature/propertyTax/transitionWorkflow';
 			jQuery('<form>.').attr({
 				method: 'post',
 				action: '/signer/reports/selectCertificate.jsp?fileStoreId='+fileStoreIds+'&moduleName=PTIS&ulbCode='+ulbCode+'&callBackUrl='+callBackUrl,
 				target: '_self'
 			})
-			.appendTo(document.body).submit(); */
+			.appendTo(document.body).submit();
+	 		*/
 		});
 		
 		</script>

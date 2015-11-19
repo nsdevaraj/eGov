@@ -44,6 +44,7 @@ import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_DEMO
 import static org.egov.ptis.constants.PropertyTaxConstants.COMMISSIONER_DESGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
 import static org.egov.ptis.constants.PropertyTaxConstants.QUERY_BASICPROPERTY_BY_BASICPROPID;
+import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -103,9 +104,12 @@ import org.egov.ptis.report.bean.PropertyAckNoticeInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @ParentPackage("egov")
-@Results({ @Result(name = PropertyTaxNoticeAction.NOTICE, location = "propertyTaxNotice-notice.jsp") })
+@Results({
+        @Result(name = PropertyTaxNoticeAction.NOTICE, location = "propertyTaxNotice-notice.jsp"),
+        @Result(name = PropertyTaxNoticeAction.DIGITAL_SIGNATURE_REDIRECTION, location = "propertyTaxNotice-digitalSignatureRedirection.jsp")
+})
 public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
-    private static final String DIGITAL_SIGNATURE_REDIRECTION = "digitalSignatureRedirection";
+    protected static final String DIGITAL_SIGNATURE_REDIRECTION = "digitalSignatureRedirection";
     private static final String PREVIEW = "Preview";
     /**
      *
@@ -230,7 +234,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
         if (notice == null) {
             PropertyNoticeInfo propertyNotice = null;
             String noticeNo = null;
-            if (!PREVIEW.equals(actionType))
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType))
                 noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
             propertyNotice = new PropertyNoticeInfo(property, noticeNo);
 
@@ -263,17 +267,17 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             reportInput.setPrintDialogOnOpenReport(true);
             reportInput.setReportFormat(FileFormat.PDF);
             reportOutput = reportService.createReport(reportInput);
-            getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
-            reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
             if (reportOutput != null && reportOutput.getReportOutputData() != null)
                 NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
-            if (!PREVIEW.equals(actionType)) {
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
                 final PtNotice savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty()
                         .getApplicationNo(),
                         noticeNo, noticeType, basicProperty, NoticePDF);
                 setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
-                // transitionWorkFlow(property);
                 return DIGITAL_SIGNATURE_REDIRECTION;
+            } else {
+                getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
+                reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
             }
         } else {
             final FileStoreMapper fsm = notice.getFileStore();

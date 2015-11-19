@@ -346,8 +346,6 @@ public class PropertyTransferService {
             if (WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(actionType)) {
                 String noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(NOTICE_TYPE_MUTATION_CERTIFICATE);
                 noticeService.saveNotice(propertyMutation.getApplicationNo(),noticeNo, NOTICE_TYPE_MUTATION_CERTIFICATE, basicProperty, new ByteArrayInputStream(reportOutput.getReportOutputData()));
-                propertyService.updateIndexes(propertyMutation, APPLICATION_TYPE_TRANSFER_OF_OWNERSHIP);
-                basicPropertyService.persist(basicProperty);
             } 
         } else {
             final FileStoreMapper fsm = notice.getFileStore();
