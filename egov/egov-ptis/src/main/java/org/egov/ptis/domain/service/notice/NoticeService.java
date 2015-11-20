@@ -71,20 +71,15 @@ public class NoticeService extends PersistenceService<PtNotice, Long> {
     protected FileStoreService fileStoreService;
 
     /**
-     * This method populates the <code>PtNotice</code> object along with notice
-     * input stream
+     * This method populates the <code>PtNotice</code> object along with notice input stream
      *
-     * @param basicProperty
-     *            the <code>BasicProperty</code> object for which the notice is
-     *            generated
-     * @param noticeNo
-     *            - notice no
-     * @param noticeType
-     *            - type of notice
-     * @param fileStream
-     *            - input stream of generated notice.
+     * @param basicProperty the <code>BasicProperty</code> object for which the notice is generated
+     * @param noticeNo - notice no
+     * @param noticeType - type of notice
+     * @param fileStream - input stream of generated notice.
      */
-    public PtNotice saveNotice(final String applicationNumber,final String noticeNo, final String noticeType, final BasicProperty basicProperty,
+    public PtNotice saveNotice(final String applicationNumber, final String noticeNo, final String noticeType,
+            final BasicProperty basicProperty,
             final InputStream fileStream) {
         final PtNotice ptNotice = new PtNotice();
         final Module module = moduleDao.getModuleByName(PTMODULENAME);
@@ -104,6 +99,23 @@ public class NoticeService extends PersistenceService<PtNotice, Long> {
         return ptNotice;
     }
 
+    /**
+     * Using this method to attach different file store if document is already signed and been sent for sign again
+     * 
+     * @param notice
+     * @param fileStream
+     * @return
+     */
+    public PtNotice updateNotice(PtNotice notice, InputStream fileStream) {
+        final String fileName = notice.getNoticeNo() + ".pdf";
+        final FileStoreMapper fileStore = fileStoreService.store(fileStream, fileName, "application/pdf",
+                FILESTORE_MODULE_NAME);
+        notice.setFileStore(fileStore);
+        notice.setNoticeDate(new Date());
+        basicPropertyService.update(notice.getBasicProperty());
+        return notice;
+    }
+
     public PtNotice getPtNoticeByNoticeNumberAndNoticeType(final String noticeNo, final String noticeType) {
 
         final Query qry = getSession().createQuery(
@@ -116,7 +128,7 @@ public class NoticeService extends PersistenceService<PtNotice, Long> {
     public PtNotice getNoticeByApplicationNumber(final String applicationNo) {
         return (PtNotice) basicPropertyService.find("from PtNotice where applicationNumber = ?", applicationNo);
     }
-    
+
     public PtNotice getNoticeByNoticeTypeAndApplicationNumber(final String noticeType, final String applicationNo) {
         return (PtNotice) basicPropertyService.find("from PtNotice where noticeType = ? and applicationNumber = ?", noticeType,
                 applicationNo);
@@ -129,4 +141,5 @@ public class NoticeService extends PersistenceService<PtNotice, Long> {
     public void setbasicPropertyService(final PersistenceService<BasicProperty, Long> basicPropertyService) {
         this.basicPropertyService = basicPropertyService;
     }
+
 }

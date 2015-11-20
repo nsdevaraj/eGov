@@ -57,6 +57,7 @@ import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISHISTORY;
 import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_WORKFLOW;
 import static org.egov.ptis.constants.PropertyTaxConstants.VAC_LAND_PROPERTY_TYPE_CATEGORY;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_APPROVE;
+import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_PRINT_NOTICE;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_REJECT;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SAVE;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
@@ -699,8 +700,21 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
                 COMMISSIONER_DESGN).getId());
         reportParams.put("userId", !users.isEmpty() ? users.get(0).getId() : 0);
         ReportOutput reportOutput = new ReportOutput();
-        if (notice == null) {
-            if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+        if (WFLOW_ACTION_STEP_PRINT_NOTICE.equalsIgnoreCase(actionType) && notice != null) {
+            final FileStoreMapper fsm = notice.getFileStore();
+            final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
+            byte[] bFile;
+            try {
+                bFile = FileUtils.readFileToByteArray(file);
+            } catch (final IOException e) {
+                throw new ApplicationRuntimeException("Exception while generating Special Notcie : " + e);
+            }
+            reportOutput.setReportOutputData(bFile);
+            reportOutput.setReportFormat(FileFormat.PDF);
+            getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
+            reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
+        } else {
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType) && notice == null) {
                 noticeNo = propertyTaxNumberGenerator
                         .generateNoticeNumber(NOTICE_TYPE_SPECIAL_NOTICE);
             }
@@ -728,27 +742,20 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
             if (reportOutput != null && reportOutput.getReportOutputData() != null)
                 specialNoticePdf = new ByteArrayInputStream(reportOutput.getReportOutputData());
             if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
-                final PtNotice savedNotice = noticeService.saveNotice(objection.getObjectionNumber(),
-                        objection.getObjectionNumber().concat(
-                                PropertyTaxConstants.NOTICE_TYPE_REVISIONPETITION_SPECIALNOTICE_PREFIX),
-                        PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE, objection.getBasicProperty(), specialNoticePdf);
-                setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                if (notice == null) {
+                    final PtNotice savedNotice = noticeService.saveNotice(objection.getObjectionNumber(),
+                            objection.getObjectionNumber().concat(
+                                    PropertyTaxConstants.NOTICE_TYPE_REVISIONPETITION_SPECIALNOTICE_PREFIX),
+                            PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE, objection.getBasicProperty(), specialNoticePdf);
+                    setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                } else {
+                    final PtNotice savedNotice = noticeService.updateNotice(notice, specialNoticePdf);
+                    setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                }
             } else {
                 getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
                 reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
             }
-        } else {
-            final FileStoreMapper fsm = notice.getFileStore();
-            final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
-            byte[] bFile;
-            try {
-                bFile = FileUtils.readFileToByteArray(file);
-            } catch (final IOException e) {
-                throw new ApplicationRuntimeException("Exception while generating Special Notcie : " + e);
-            }
-            reportOutput.setReportOutputData(bFile);
-            reportOutput.setReportFormat(FileFormat.PDF);
-            reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
         }
     }
 
@@ -948,10 +955,8 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
         /*
          * End workflow
          */
-        PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_SPECIAL_NOTICE,
-                objection.getObjectionNumber());
         if (objection.getGenerateSpecialNotice() != null && objection.getGenerateSpecialNotice() && !PREVIEW.equals(actionType)) {
-            if (notice != null) {
+            if (WFLOW_ACTION_STEP_PRINT_NOTICE.equals(actionType)) {
                 objection.getBasicProperty().setStatus(
                         propertyStatusDAO.getPropertyStatusByCode(PropertyTaxConstants.STATUS_CODE_ASSESSED));
                 objection.getBasicProperty().getProperty().setStatus(STATUS_ISHISTORY);
@@ -995,6 +1000,7 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
                 reportOutput.setReportOutputData(bFile);
                 reportOutput.setReportFormat(FileFormat.PDF);
                 if (!WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+                    getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
                     reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
                 }
             }

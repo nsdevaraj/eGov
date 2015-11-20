@@ -535,6 +535,7 @@ public interface PropertyTaxConstants {
     public static final String WFLOW_ACTION_STEP_REJECT = "Reject";
     public static final String WFLOW_ACTION_STEP_CANCEL = "Cancel";
     public static final String WFLOW_ACTION_STEP_NOTICE_GENERATE = "Generate Notice";
+    public static final String WFLOW_ACTION_STEP_PRINT_NOTICE = "Print Special Notice";
 
     // workflow action names
     public static final String WFLOW_ACTION_NAME_CREATE = "Create";

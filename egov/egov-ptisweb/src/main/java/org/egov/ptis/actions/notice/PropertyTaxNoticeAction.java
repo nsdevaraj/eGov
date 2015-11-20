@@ -44,6 +44,7 @@ import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_DEMO
 import static org.egov.ptis.constants.PropertyTaxConstants.COMMISSIONER_DESGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
 import static org.egov.ptis.constants.PropertyTaxConstants.QUERY_BASICPROPERTY_BY_BASICPROPID;
+import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_NOTICE_GENERATE;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 
 import java.io.ByteArrayInputStream;
@@ -231,10 +232,24 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
 
         final PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(noticeType, property.getApplicationNo());
         ReportOutput reportOutput = new ReportOutput();
-        if (notice == null) {
+        if (WFLOW_ACTION_STEP_NOTICE_GENERATE.equalsIgnoreCase(actionType)) {
+            final FileStoreMapper fsm = notice.getFileStore();
+            final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
+            byte[] bFile;
+            try {
+                bFile = FileUtils.readFileToByteArray(file);
+            } catch (final IOException e) {
+                throw new ApplicationRuntimeException("Exception while generating Special Notcie : " + e);
+            }
+            reportOutput.setReportOutputData(bFile);
+            reportOutput.setReportFormat(FileFormat.PDF);
+            getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
+            reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
+            endWorkFlow(basicProperty);
+        } else {
             PropertyNoticeInfo propertyNotice = null;
             String noticeNo = null;
-            if (WFLOW_ACTION_STEP_SIGN.equals(actionType))
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType) && notice == null)
                 noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
             propertyNotice = new PropertyNoticeInfo(property, noticeNo);
 
@@ -270,30 +285,20 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             if (reportOutput != null && reportOutput.getReportOutputData() != null)
                 NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
             if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
-                final PtNotice savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty()
-                        .getApplicationNo(),
-                        noticeNo, noticeType, basicProperty, NoticePDF);
-                setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                if (notice == null) {
+                    final PtNotice savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty()
+                            .getApplicationNo(),
+                            noticeNo, noticeType, basicProperty, NoticePDF);
+                    setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                } else {
+                    final PtNotice savedNotice = noticeService.updateNotice(notice, NoticePDF);
+                    setFileStoreIds(savedNotice.getFileStore().getFileStoreId());
+                }
                 return DIGITAL_SIGNATURE_REDIRECTION;
             } else {
                 getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
                 reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
             }
-        } else {
-            final FileStoreMapper fsm = notice.getFileStore();
-            final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
-            byte[] bFile;
-            try {
-                bFile = FileUtils.readFileToByteArray(file);
-            } catch (final IOException e) {
-                throw new ApplicationRuntimeException("Exception while generating Special Notcie : " + e);
-            }
-            reportOutput.setReportOutputData(bFile);
-            reportOutput.setReportFormat(FileFormat.PDF);
-            getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
-            reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
-            if (!PREVIEW.equals(actionType))
-                endWorkFlow(basicProperty);
         }
         if (!PREVIEW.equals(actionType)) {
             propService.updateIndexes(property, APPLICATION_TYPE_ALTER_ASSESSENT);
