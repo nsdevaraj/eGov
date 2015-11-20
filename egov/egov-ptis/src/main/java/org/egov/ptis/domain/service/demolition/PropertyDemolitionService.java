@@ -233,8 +233,9 @@ public class PropertyDemolitionService extends PersistenceService<PropertyImpl, 
                 propertyTax = demandCollMap.get(DEMANDRSN_STR_GENERAL_TAX);
             else
                 propertyTax = demandCollMap.get(DEMANDRSN_STR_VACANT_TAX);
-            BigDecimal totalTax = demandCollMap.get(DEMANDRSN_STR_EDUCATIONAL_CESS)
-                    			.add(demandCollMap.get(DEMANDRSN_STR_LIBRARY_CESS)).add(propertyTax);
+            BigDecimal totalTax = propertyTax
+                    			.add(demandCollMap.get(DEMANDRSN_STR_LIBRARY_CESS) == null ? BigDecimal.ZERO : demandCollMap.get(DEMANDRSN_STR_LIBRARY_CESS))
+                    			.add(demandCollMap.get(DEMANDRSN_STR_EDUCATIONAL_CESS) == null ? BigDecimal.ZERO : demandCollMap.get(DEMANDRSN_STR_EDUCATIONAL_CESS));
             model.addAttribute("propertyTax", propertyTax);
             if(StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage()) 
             		&& !property.getPropertyDetail().getDeviationPercentage().equalsIgnoreCase("-1")){

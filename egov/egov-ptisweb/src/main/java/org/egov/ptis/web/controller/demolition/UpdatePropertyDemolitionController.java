@@ -63,6 +63,7 @@ import javax.validation.Valid;
 import org.egov.eis.web.contract.WorkflowContainer;
 import org.egov.eis.web.controller.workflow.GenericWorkFlowController;
 import org.egov.infra.security.utils.SecurityUtils;
+import org.egov.infstr.services.PersistenceService;
 import org.egov.pims.commons.Designation;
 import org.egov.ptis.client.util.PropertyTaxUtil;
 import org.egov.ptis.domain.dao.demand.PtDemandDao;
@@ -91,6 +92,9 @@ public class UpdatePropertyDemolitionController extends GenericWorkFlowControlle
     public static final String VIEW = "view";
 
     PropertyDemolitionService propertyDemolitionService;
+    
+    @Autowired
+    private PersistenceService<Property, Long> persistenceService;
 
     @Autowired
     public UpdatePropertyDemolitionController(PropertyDemolitionService propertyDemolitionService) {
@@ -170,6 +174,8 @@ public class UpdatePropertyDemolitionController extends GenericWorkFlowControlle
             if (WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(workFlowAction)) {
                 property.setStatus(STATUS_ISACTIVE);
                 oldProperty.setStatus(STATUS_ISHISTORY);
+                persistenceService.persist(oldProperty);
+                persistenceService.persist(property);
             }
 
             if (workFlowAction.equalsIgnoreCase(WFLOW_ACTION_STEP_NOTICE_GENERATE) ||
