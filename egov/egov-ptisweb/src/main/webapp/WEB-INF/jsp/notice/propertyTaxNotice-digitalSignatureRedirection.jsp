@@ -46,7 +46,7 @@
 
 	 	jQuery(document).ready( function() {
 	 		var fileStoreIds = '<s:property value="%{fileStoreIds}" />';
-	 		/* jQuery('<form>.').attr({
+	 		jQuery('<form>.').attr({
 				method: 'post',
 				action: '/ptis/digitalSignature/propertyTax/transitionWorkflow',
 				target: '_self'
@@ -56,7 +56,8 @@
 			    name: 'fileStoreId',
 			    value: fileStoreIds
 			})).appendTo( document.body )
-			.appendTo(document.body).submit(); */
+			.appendTo(document.body).submit();
+			/* 
 	 		var ulbCode = '<s:property value="%{ulbCode}" />';
 	 		var callBackUrl = '/ptis/digitalSignature/propertyTax/transitionWorkflow';
 			jQuery('<form>.').attr({
@@ -64,7 +65,7 @@
 				action: '/signer/reports/selectCertificate.jsp?fileStoreId='+fileStoreIds+'&moduleName=PTIS&ulbCode='+ulbCode+'&callBackUrl='+callBackUrl,
 				target: '_self'
 			})
-			.appendTo(document.body).submit(); 
+			.appendTo(document.body).submit(); */
 		});
 		
 		</script>
