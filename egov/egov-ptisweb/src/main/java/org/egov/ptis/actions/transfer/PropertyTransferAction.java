@@ -131,7 +131,7 @@ import com.opensymphony.xwork2.ActionContext;
         @Result(name = PropertyTransferAction.REDIRECT_SUCCESS, location = PropertyTransferAction.REDIRECT_SUCCESS, type = "redirectAction", params = {
                 "assessmentNo", "${assessmentNo}", "mutationId", "${mutationId}" }),
         @Result(name = PropertyTransferAction.COMMON_FORM, location = "search/searchProperty-commonForm.jsp"),
-        @Result(name = PropertyTransferAction.DIGITAL_SIGNATURE_REDIRECTION, location = "transferProperty-digitalSignatureRedirection.jsp")})
+        @Result(name = PropertyTransferAction.DIGITAL_SIGNATURE_REDIRECTION, location = "transfer/transferProperty-digitalSignatureRedirection.jsp")})
 
 @Namespace("/property/transfer")
 public class PropertyTransferAction extends GenericWorkFlowAction {
@@ -431,7 +431,7 @@ public class PropertyTransferAction extends GenericWorkFlowAction {
         } else {
             PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_MUTATION_CERTIFICATE,
                     propertyMutation.getApplicationNo());
-            setFileStoreIds(notice.getFileStore().getId().toString());
+            setFileStoreIds(notice.getFileStore().getFileStoreId());
             return DIGITAL_SIGNATURE_REDIRECTION;
         }
         return PRINTNOTICE;
