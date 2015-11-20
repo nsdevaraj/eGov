@@ -48,6 +48,8 @@ import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_NEW_
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_TRANSFER_OF_OWNERSHIP;
 import static org.egov.ptis.constants.PropertyTaxConstants.DEMOLITION;
 import static org.egov.ptis.constants.PropertyTaxConstants.NEW_ASSESSMENT;
+import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISACTIVE;
+import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISHISTORY;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -62,6 +64,7 @@ import org.egov.infra.workflow.service.SimpleWorkflowService;
 import org.egov.infstr.workflow.WorkFlowMatrix;
 import org.egov.pims.commons.Position;
 import org.egov.ptis.constants.PropertyTaxConstants;
+import org.egov.ptis.domain.dao.property.PropertyStatusDAO;
 import org.egov.ptis.domain.entity.objection.RevisionPetition;
 import org.egov.ptis.domain.entity.property.BasicProperty;
 import org.egov.ptis.domain.entity.property.PropertyImpl;
@@ -121,6 +124,9 @@ public class DigitalSignatureWorkflowController {
 
     @Autowired
     protected SimpleWorkflowService<RevisionPetition> revisionPetitionWorkFlowService;
+    
+    @Autowired
+    private PropertyStatusDAO propertyStatusDAO;
 
     @RequestMapping(value = "/propertyTax/transitionWorkflow")
     public String transitionWorkflow(final HttpServletRequest request, final Model model) {
@@ -172,41 +178,60 @@ public class DigitalSignatureWorkflowController {
     }
 
     private String transitionWorkFlow(final PropertyImpl property) {
-        final User user = securityUtils.getCurrentUser();
-        final DateTime currentDate = new DateTime();
-        final Position pos = getWorkflowInitiator(property).getPosition();
         final String applicationType = property.getCurrentState().getValue().startsWith(CREATE) ? NEW_ASSESSMENT : property
                 .getCurrentState().getValue().startsWith(ALTER) ? ADDTIONAL_RULE_ALTER_ASSESSMENT
                         : property.getCurrentState().getValue().startsWith(BIFURCATE) ? ADDTIONAL_RULE_BIFURCATE_ASSESSMENT : property
                                 .getCurrentState().getValue().startsWith(STR_DEMOLITION) ? DEMOLITION : null;
-        final WorkFlowMatrix wfmatrix = propertyWorkflowService.getWfMatrix(property.getStateType(), null,
-                null, applicationType, property.getCurrentState().getValue(), null);
-        property.transition(true).withSenderName(user.getName())
-        .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
-        .withNextAction(wfmatrix.getNextAction());
+        if (propertyService.isMeesevaUser(property.getCreatedBy())) {
+            property.transition().end();
+            property.getBasicProperty().setUnderWorkflow(false);
+        } else {
+            final User user = securityUtils.getCurrentUser();
+            final DateTime currentDate = new DateTime();
+            final Position pos = getWorkflowInitiator(property).getPosition();
+            final WorkFlowMatrix wfmatrix = propertyWorkflowService.getWfMatrix(property.getStateType(), null,
+                    null, applicationType, property.getCurrentState().getValue(), null);
+            property.transition(true).withSenderName(user.getName())
+            .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
+            .withNextAction(wfmatrix.getNextAction());
+        }
         return applicationType;
     }
 
-    private void transitionWorkFlow(final StateAware revPetition) {
-        final User user = securityUtils.getCurrentUser();
-        final Position pos = getWorkflowInitiator(revPetition).getPosition();
-        final WorkFlowMatrix wfmatrix = revisionPetitionWorkFlowService.getWfMatrix(revPetition.getStateType(), null, null,
-                null, revPetition.getCurrentState().getValue(), null);
-        revPetition.transition(true).withStateValue(wfmatrix.getNextState()).withOwner(pos)
-        .withSenderName(user.getName()).withDateInfo(new DateTime().toDate())
-        .withNextAction(wfmatrix.getNextAction());
+    private void transitionWorkFlow(final RevisionPetition revPetition) {
+        if (propertyService.isMeesevaUser(revPetition.getCreatedBy())) {
+            revPetition.getBasicProperty().setStatus(
+                    propertyStatusDAO.getPropertyStatusByCode(PropertyTaxConstants.STATUS_CODE_ASSESSED));
+            revPetition.getBasicProperty().getProperty().setStatus(STATUS_ISHISTORY);
+            revPetition.getBasicProperty().setUnderWorkflow(Boolean.FALSE);
+            revPetition.getProperty().setStatus(STATUS_ISACTIVE);
+            revPetition.transition().end();
+        } else {
+            final User user = securityUtils.getCurrentUser();
+            final Position pos = getWorkflowInitiator(revPetition).getPosition();
+            final WorkFlowMatrix wfmatrix = revisionPetitionWorkFlowService.getWfMatrix(revPetition.getStateType(), null, null,
+                    null, revPetition.getCurrentState().getValue(), null);
+            revPetition.transition(true).withStateValue(wfmatrix.getNextState()).withOwner(pos)
+            .withSenderName(user.getName()).withDateInfo(new DateTime().toDate())
+            .withNextAction(wfmatrix.getNextAction());
+        }
     }
 
     public void transitionWorkFlow(final PropertyMutation propertyMutation) {
-        final DateTime currentDate = new DateTime();
-        final User user = securityUtils.getCurrentUser();
-        final Assignment wfInitiator = getWorkflowInitiator(propertyMutation);
-        final Position pos = wfInitiator.getPosition();
-        final WorkFlowMatrix wfmatrix = transferWorkflowService.getWfMatrix(propertyMutation.getStateType(),
-                null, null, ADDTIONAL_RULE_PROPERTY_TRANSFER, propertyMutation.getCurrentState().getValue(), null);
-        propertyMutation.transition(true).withSenderName(user.getName())
-        .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
-        .withNextAction(wfmatrix.getNextAction());
+        if (propertyService.isMeesevaUser(propertyMutation.getCreatedBy())) {
+            propertyMutation.transition().end();
+            propertyMutation.getBasicProperty().setUnderWorkflow(false);
+        } else {
+            final DateTime currentDate = new DateTime();
+            final User user = securityUtils.getCurrentUser();
+            final Assignment wfInitiator = getWorkflowInitiator(propertyMutation);
+            final Position pos = wfInitiator.getPosition();
+            final WorkFlowMatrix wfmatrix = transferWorkflowService.getWfMatrix(propertyMutation.getStateType(),
+                    null, null, ADDTIONAL_RULE_PROPERTY_TRANSFER, propertyMutation.getCurrentState().getValue(), null);
+            propertyMutation.transition(true).withSenderName(user.getName())
+            .withStateValue(wfmatrix.getNextState()).withDateInfo(currentDate.toDate()).withOwner(pos)
+            .withNextAction(wfmatrix.getNextAction());
+        }
     }
 
     private Assignment getWorkflowInitiator(final StateAware state) {
