@@ -83,11 +83,11 @@
 						<th><spring:message code="lbl.digitalSignature.module"/></th>
 						<th><spring:message code="lbl.digitalSignature.type"/></th>
 						<th><spring:message code="lbl.digitalSignature.details"/></th>
-						<th><input type="checkbox"  /> <spring:message code="lbl.digitalSignature.sign"/></th> 
+						<th><spring:message code="lbl.digitalSignature.sign"/></th> 
 					</tr> </thead>
 					<c:choose>
 						<c:when test="${!digitalSignatureReportList.isEmpty()}">
-							<c:forEach items="${digitalSignatureReportList}" var="var1" varStatus="counter">
+							<c:forEach items="${digitalSignatureReportList}" var="record" varStatus="counter">
 								<tr id="digSignInfo">
 								
 									<td class="blueborderfortd">
@@ -95,26 +95,22 @@
 									</td>
 								
 									<td class="blueborderfortd" >	
-										 <input type="text" class="form-control low-width"  value="${var1.module}" 
-										 name="module" id="module"
-										 readonly="true"/>
-						 				<input type="hidden" id="objectId" name="objectId" value="${var1.objectId}" />
+										<c:out value="${record.module}"/>
+						 				<input type="hidden" id="objectId" name="objectId" value="${record.objectId}" />
+						 				<input type="hidden" id="currentState" name="currentState" value="${record.status}" />
 						 			</td>
 						 			
 						 			<td class="blueborderfortd" >	
-										 <input type="text" class="form-control low-width"  value="${var1.type}" 
-										 name="module" id="module"
-										 readonly="true"/>
+						 				<c:out value="${record.type}"/>	
 						 			</td> 
 						 			
 						 			<td class="blueborderfortd" >	
-										 <input type="text" class="form-control low-width"  value="${var1.details}" 
-										 name="details" id="details"
-										 readonly="true"/>
+						 				<c:out value="${record.details}"/>
 						 			</td>
 						 			
 						 			<td class="blueborderfortd" >	
-										 <span class="add-padding"><button type="button" id="previewButn" onclick="callPreview(this);" class="btn">Preview</button></span><span class="add-padding"><button type="button btn" id="signButn" onclick="generateNotice(this,'Sign')" class="btn">Sign</button></span>
+										 <span class="add-padding"><button type="button" id="previewButn" onclick="generateNotice(this, 'Preview', '<c:out value="${record.status}"/>');" class="btn btn-default">Preview</button></span>
+										 <span class="add-padding"><button type="button" id="signButn" onclick="generateNotice(this, 'Sign', '<c:out value="${record.status}"/>')" class="btn btn-default">Sign</button></span>
 						 			</td>
 								</tr>
 							</c:forEach>
@@ -124,7 +120,7 @@
 						</table>
 
 						<div class="text-center">
-							<button type="button" class="btn btn-primary" id="submitButton">Submit</button>
+							<button type="button" class="btn btn-primary" id="submitButton">Sign All</button>
 							<a href="javascript:void(0)" class="btn btn-default" onclick="self.close()">Close</a> 
 						</div> 
 					</div>

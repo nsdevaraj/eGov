@@ -941,7 +941,7 @@ public class RevisionPetitionAction extends PropertyTaxBaseAction {
     @Action(value = "/revPetition/revPetition-generateSpecialNotice")
     public String generateSpecialNotice() {
         setUlbCode(EgovThreadLocals.getCityCode());
-        if (PREVIEW.equalsIgnoreCase(actionType)) {
+        if (PREVIEW.equalsIgnoreCase(actionType) || WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(actionType)) {
             objection = revisionPetitionService.findById(Long.valueOf(parameters.get("objectionId")[0]), false);
         }
         /*

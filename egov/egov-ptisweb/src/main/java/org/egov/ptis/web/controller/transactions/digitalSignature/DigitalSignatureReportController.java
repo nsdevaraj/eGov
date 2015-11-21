@@ -109,13 +109,17 @@ public class DigitalSignatureReportController {
                         else
                             workflowTypes = null;
                         if (PTMODULENAME.equalsIgnoreCase(workflowTypes.getModule().getName())) {
-                            if ("org.egov.ptis.domain.entity.property.PropertyImpl".equals(record.getClass().getName()))
+                            if (record.getState().getValue().startsWith("Create")
+                                    || record.getState().getValue().startsWith("Alter")
+                                    || record.getState().getValue().startsWith("Bifurcate")
+                                    || record.getState().getValue().startsWith("Demolition"))
                                 tempMap.put("objectId", ((PropertyImpl) record).getBasicProperty().getId());
                             else
                                 tempMap.put("objectId", record.getId());
                             tempMap.put("type", workflowTypes != null ? workflowTypes.getDisplayName() : null);
                             tempMap.put("module", workflowTypes != null ? workflowTypes.getModule().getDisplayName() : null);
                             tempMap.put("details", record.getStateDetails());
+                            tempMap.put("status", record.getCurrentState().getValue());
                             resultList.add(tempMap);
                         }
                     }

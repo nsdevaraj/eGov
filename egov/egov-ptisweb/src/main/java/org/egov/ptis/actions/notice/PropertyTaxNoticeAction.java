@@ -43,7 +43,11 @@ import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_ALTE
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_DEMOLITION;
 import static org.egov.ptis.constants.PropertyTaxConstants.COMMISSIONER_DESGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
+import static org.egov.ptis.constants.PropertyTaxConstants.NOTICE_TYPE_MUTATION_CERTIFICATE;
+import static org.egov.ptis.constants.PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE;
 import static org.egov.ptis.constants.PropertyTaxConstants.QUERY_BASICPROPERTY_BY_BASICPROPID;
+import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISACTIVE;
+import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISHISTORY;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_NOTICE_GENERATE;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 
@@ -92,24 +96,35 @@ import org.egov.ptis.client.util.PropertyTaxUtil;
 import org.egov.ptis.constants.PropertyTaxConstants;
 import org.egov.ptis.domain.dao.demand.PtDemandDao;
 import org.egov.ptis.domain.entity.demand.Ptdemand;
+import org.egov.ptis.domain.entity.objection.RevisionPetition;
 import org.egov.ptis.domain.entity.property.BasicProperty;
 import org.egov.ptis.domain.entity.property.BasicPropertyImpl;
 import org.egov.ptis.domain.entity.property.Floor;
 import org.egov.ptis.domain.entity.property.PropertyDetail;
 import org.egov.ptis.domain.entity.property.PropertyID;
 import org.egov.ptis.domain.entity.property.PropertyImpl;
+import org.egov.ptis.domain.entity.property.PropertyMutation;
 import org.egov.ptis.domain.service.notice.NoticeService;
 import org.egov.ptis.domain.service.property.PropertyService;
+import org.egov.ptis.domain.service.revisionPetition.RevisionPetitionService;
+import org.egov.ptis.domain.service.transfer.PropertyTransferService;
 import org.egov.ptis.notice.PtNotice;
 import org.egov.ptis.report.bean.PropertyAckNoticeInfo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @ParentPackage("egov")
 @Results({
-        @Result(name = PropertyTaxNoticeAction.NOTICE, location = "propertyTaxNotice-notice.jsp"),
-        @Result(name = PropertyTaxNoticeAction.DIGITAL_SIGNATURE_REDIRECTION, location = "propertyTaxNotice-digitalSignatureRedirection.jsp")
+    @Result(name = PropertyTaxNoticeAction.NOTICE, location = "propertyTaxNotice-notice.jsp"),
+    @Result(name = PropertyTaxNoticeAction.DIGITAL_SIGNATURE_REDIRECTION, location = "propertyTaxNotice-digitalSignatureRedirection.jsp")
 })
 public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
+    private static final String ALTER = "Alter";
+    private static final String BIFURCATE = "Bifurcate";
+    private static final String DEMOLITION = "Demolition";
+    private static final String REVISION_PETITION = "Revision Petition";
+    private static final String MODIFY = "modify";
+    private static final String CREATE = "create";
     protected static final String DIGITAL_SIGNATURE_REDIRECTION = "digitalSignatureRedirection";
     private static final String PREVIEW = "Preview";
     /**
@@ -134,12 +149,17 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     private String basicPropertyIds;
     private String fileStoreIds;
     private String ulbCode;
+    private RevisionPetitionService revisionPetitionService;
 
     @Autowired
     private DesignationService designationService;
 
     @Autowired
     private PtDemandDao ptDemandDAO;
+
+    @Autowired
+    @Qualifier("transferOwnerService")
+    private PropertyTransferService transferOwnerService;
 
     public PropertyTaxNoticeAction() {
     }
@@ -155,78 +175,98 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     @Action(value = "/notice/propertyTaxNotice-generateBulkNotice")
     public String generateBulkNotice() {
         setUlbCode(EgovThreadLocals.getCityCode());
-        final Map<String, Object> reportParams = new HashMap<String, Object>();
-        noticeType = PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE;
-        ReportRequest reportInput = null;
-        BasicPropertyImpl basicProperty = null;
-        final String idList[] = basicPropertyIds.split(",");
-        if (idList.length != 0)
-            for (final String element : idList) {
-                basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
-                        QUERY_BASICPROPERTY_BY_BASICPROPID, Long.valueOf(element));
-                property = (PropertyImpl) basicProperty.getProperty();
-
-                if (property == null)
-                    property = (PropertyImpl) basicProperty.getWFProperty();
-
-                final PtNotice notice = noticeService
-                        .getNoticeByNoticeTypeAndApplicationNumber(noticeType, property.getApplicationNo());
-                ReportOutput reportOutput = new ReportOutput();
-                final StringBuffer fileIds = new StringBuffer();
-                if (notice == null) {
-                    PropertyNoticeInfo propertyNotice = null;
-                    String noticeNo = null;
-                    noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
-                    propertyNotice = new PropertyNoticeInfo(property, noticeNo);
-
-                    if (PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE.equals(noticeType)) {
-                        final HttpServletRequest request = ServletActionContext.getRequest();
-                        final String url = WebUtils.extractRequestDomainURL(request, false);
-                        final String imagePath = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
-                                (String) request.getSession().getAttribute("citylogo"));
-                        final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
-                        reportParams.put("logoPath", imagePath);
-                        reportParams.put("cityName", cityName);
-                        reportParams.put("mode", "create");
-                        reportParams.put("actionType", "Sign");
-                        setNoticeInfo(propertyNotice, basicProperty);
-                        if (StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage()))
-                            reportParams.put("unauthorizedProperty", "yes");
-                        else
-                            reportParams.put("unauthorizedProperty", "no");
-                        final List<PropertyAckNoticeInfo> floorDetails = getFloorDetailsForNotice(propertyNotice.getOwnerInfo()
-                                .getTotalTax());
-                        propertyNotice.setFloorDetailsForNotice(floorDetails);
-                        reportInput = new ReportRequest(PropertyTaxConstants.REPORT_TEMPLATENAME_SPECIAL_NOTICE, propertyNotice,
-                                reportParams);
-                    }
-                    reportInput.setPrintDialogOnOpenReport(true);
-                    reportInput.setReportFormat(FileFormat.PDF);
-                    reportOutput = reportService.createReport(reportInput);
-                    if (reportOutput != null && reportOutput.getReportOutputData() != null)
-                        NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
-                    final PtNotice savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty()
-                            .getApplicationNo(), noticeNo, noticeType, basicProperty, NoticePDF);
-                    if (fileIds != null)
-                        fileIds.append(",");
-                    fileIds.append(savedNotice.getFileStore().getId());
-                }
-                setFileStoreIds(fileIds.toString());
+        noticeType = NOTICE_TYPE_SPECIAL_NOTICE;
+        actionType = WFLOW_ACTION_STEP_SIGN;
+        final String entries[] = basicPropertyIds.split(",");
+        final StringBuffer fileStoreId = new StringBuffer();
+        for (final String entry : entries) {
+            if (!fileStoreId.toString().equals("")) {
+                fileStoreId.append(",");
             }
+            final String id[] = entry.split("~");
+            if (CREATE.equalsIgnoreCase(id[1]) || ALTER.equalsIgnoreCase(id[1]) || BIFURCATE.equalsIgnoreCase(id[1])) {
+                noticeMode = CREATE.equalsIgnoreCase(id[1]) ? CREATE : MODIFY;
+                fileStoreId.append(generatePropertyNotice(Long.valueOf(id[0]), id[1]));
+            } else if (REVISION_PETITION.equalsIgnoreCase(id[1]))
+                fileStoreId.append(generatePropertyNotice(Long.valueOf(id[0]), id[1]));
+            else if (DEMOLITION.equalsIgnoreCase(id[1])) {
+                noticeMode = APPLICATION_TYPE_DEMOLITION;
+                final BasicPropertyImpl basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
+                        QUERY_BASICPROPERTY_BY_BASICPROPID, Long.valueOf(id[0]));
+                basicProperty.getWFProperty().setStatus(STATUS_ISACTIVE);
+                basicProperty.getProperty().setStatus(STATUS_ISHISTORY);
+                basicPropertyService.update(basicProperty);
+                fileStoreId.append(generatePropertyNotice(Long.valueOf(id[0]), id[1]));
+            } else {
+                final HttpServletRequest request = ServletActionContext.getRequest();
+                final String url = WebUtils.extractRequestDomainURL(request, false);
+                final String cityLogo = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
+                        (String) request.getSession().getAttribute("citylogo"));
+                final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
+                final PropertyMutation propertyMutation = (PropertyMutation) persistenceService.find(
+                        "From PropertyMutation where id = ? ",
+                        Long.valueOf(id[0]));
+                final BasicProperty basicProperty = propertyMutation.getBasicProperty();
+                transferOwnerService.generateTransferNotice(basicProperty, propertyMutation, cityName, cityLogo, entry);
+                final PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_MUTATION_CERTIFICATE,
+                        propertyMutation.getApplicationNo());
+                fileStoreId.append(notice.getFileStore().getFileStoreId());
+            }
+        }
+        setFileStoreIds(fileStoreId.toString());
         return DIGITAL_SIGNATURE_REDIRECTION;
+    }
+
+    private String generatePropertyNotice(final Long basicPropertyId, final String type) {
+        BasicPropertyImpl basicProperty = null;
+        PtNotice notice = null;
+        RevisionPetition revisionPetition = null;
+        if (REVISION_PETITION.equalsIgnoreCase(type)) {
+            revisionPetition = revisionPetitionService.findById(basicPropertyId, false);
+            basicProperty = (BasicPropertyImpl) revisionPetition.getBasicProperty();
+            property = (PropertyImpl) basicProperty.getProperty();
+            if (property == null)
+                property = (PropertyImpl) basicProperty.getWFProperty();
+            notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_SPECIAL_NOTICE,
+                    revisionPetition.getObjectionNumber());
+        } else {
+            basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
+                    QUERY_BASICPROPERTY_BY_BASICPROPID, basicPropertyId);
+            property = (PropertyImpl) basicProperty.getProperty();
+            if (property == null)
+                property = (PropertyImpl) basicProperty.getWFProperty();
+            notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(noticeType, property.getApplicationNo());
+        }
+        ReportOutput reportOutput = new ReportOutput();
+        PropertyNoticeInfo propertyNotice = null;
+        final String noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
+        propertyNotice = new PropertyNoticeInfo(property, noticeNo);
+        final ReportRequest reportInput = generateNoticeReportRequest(basicProperty, propertyNotice);
+        reportOutput = reportService.createReport(reportInput);
+        if (reportOutput != null && reportOutput.getReportOutputData() != null)
+            NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
+        PtNotice savedNotice = null;
+        if (notice == null) {
+            if (REVISION_PETITION.equalsIgnoreCase(type))
+                savedNotice = noticeService.saveNotice(revisionPetition.getObjectionNumber(),
+                        revisionPetition.getObjectionNumber().concat(
+                                PropertyTaxConstants.NOTICE_TYPE_REVISIONPETITION_SPECIALNOTICE_PREFIX),
+                                PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE, revisionPetition.getBasicProperty(), NoticePDF);
+            else
+                savedNotice = noticeService.saveNotice(basicProperty.getPropertyForBasicProperty()
+                        .getApplicationNo(),
+                        noticeNo, noticeType, basicProperty, NoticePDF);
+        } else
+            savedNotice = noticeService.updateNotice(notice, NoticePDF);
+        return savedNotice.getFileStore().getFileStoreId();
     }
 
     @Action(value = "/notice/propertyTaxNotice-generateNotice")
     public String generateNotice() {
         setUlbCode(EgovThreadLocals.getCityCode());
-        final Map<String, Object> reportParams = new HashMap<String, Object>();
-        ReportRequest reportInput = null;
         final BasicPropertyImpl basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
                 QUERY_BASICPROPERTY_BY_BASICPROPID, basicPropId);
         property = (PropertyImpl) basicProperty.getProperty();
-        final List<User> users = eisCommonService.getAllActiveUsersByGivenDesig(designationService.getDesignationByName(
-                COMMISSIONER_DESGN).getId());
-        reportParams.put("userId", !users.isEmpty() ? users.get(0).getId() : 0);
         if (property == null)
             property = (PropertyImpl) basicProperty.getWFProperty();
 
@@ -252,35 +292,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             if (WFLOW_ACTION_STEP_SIGN.equals(actionType) && notice == null)
                 noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(noticeType);
             propertyNotice = new PropertyNoticeInfo(property, noticeNo);
-
-            if (PropertyTaxConstants.NOTICE_TYPE_SPECIAL_NOTICE.equals(noticeType)) {
-                final HttpServletRequest request = ServletActionContext.getRequest();
-                final String url = WebUtils.extractRequestDomainURL(request, false);
-                final String imagePath = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
-                        (String) request.getSession().getAttribute("citylogo"));
-                final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
-                reportParams.put("logoPath", imagePath);
-                reportParams.put("cityName", cityName);
-                if (noticeMode.equalsIgnoreCase("create"))
-                    reportParams.put("mode", "create");
-                else if (noticeMode.equalsIgnoreCase("modify"))
-                    reportParams.put("mode", "modify");
-                else
-                    reportParams.put("mode", APPLICATION_TYPE_DEMOLITION);
-                reportParams.put("actionType", actionType);
-                setNoticeInfo(propertyNotice, basicProperty);
-                if (StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage()))
-                    reportParams.put("unauthorizedProperty", "yes");
-                else
-                    reportParams.put("unauthorizedProperty", "no");
-                final List<PropertyAckNoticeInfo> floorDetails = getFloorDetailsForNotice(propertyNotice.getOwnerInfo()
-                        .getTotalTax());
-                propertyNotice.setFloorDetailsForNotice(floorDetails);
-                reportInput = new ReportRequest(PropertyTaxConstants.REPORT_TEMPLATENAME_SPECIAL_NOTICE, propertyNotice,
-                        reportParams);
-            }
-            reportInput.setPrintDialogOnOpenReport(true);
-            reportInput.setReportFormat(FileFormat.PDF);
+            final ReportRequest reportInput = generateNoticeReportRequest(basicProperty, propertyNotice);
             reportOutput = reportService.createReport(reportInput);
             if (reportOutput != null && reportOutput.getReportOutputData() != null)
                 NoticePDF = new ByteArrayInputStream(reportOutput.getReportOutputData());
@@ -305,6 +317,44 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             basicPropertyService.update(basicProperty);
         }
         return NOTICE;
+    }
+
+    private ReportRequest generateNoticeReportRequest(final BasicPropertyImpl basicProperty,
+            final PropertyNoticeInfo propertyNotice) {
+        final Map<String, Object> reportParams = new HashMap<String, Object>();
+        ReportRequest reportInput = null;
+        final List<User> users = eisCommonService.getAllActiveUsersByGivenDesig(designationService.getDesignationByName(
+                COMMISSIONER_DESGN).getId());
+        reportParams.put("userId", !users.isEmpty() ? users.get(0).getId() : 0);
+        if (NOTICE_TYPE_SPECIAL_NOTICE.equals(noticeType)) {
+            final HttpServletRequest request = ServletActionContext.getRequest();
+            final String url = WebUtils.extractRequestDomainURL(request, false);
+            final String imagePath = url.concat(PropertyTaxConstants.IMAGE_CONTEXT_PATH).concat(
+                    (String) request.getSession().getAttribute("citylogo"));
+            final String cityName = request.getSession().getAttribute("citymunicipalityname").toString();
+            reportParams.put("logoPath", imagePath);
+            reportParams.put("cityName", cityName);
+            if (CREATE.equalsIgnoreCase(noticeMode))
+                reportParams.put("mode", CREATE);
+            else if (MODIFY.equalsIgnoreCase(noticeMode))
+                reportParams.put("mode", MODIFY);
+            else
+                reportParams.put("mode", APPLICATION_TYPE_DEMOLITION);
+            reportParams.put("actionType", actionType);
+            setNoticeInfo(propertyNotice, basicProperty);
+            if (StringUtils.isNotBlank(property.getPropertyDetail().getDeviationPercentage()))
+                reportParams.put("unauthorizedProperty", "yes");
+            else
+                reportParams.put("unauthorizedProperty", "no");
+            final List<PropertyAckNoticeInfo> floorDetails = getFloorDetailsForNotice(propertyNotice.getOwnerInfo()
+                    .getTotalTax());
+            propertyNotice.setFloorDetailsForNotice(floorDetails);
+            reportInput = new ReportRequest(PropertyTaxConstants.REPORT_TEMPLATENAME_SPECIAL_NOTICE, propertyNotice,
+                    reportParams);
+            reportInput.setPrintDialogOnOpenReport(true);
+            reportInput.setReportFormat(FileFormat.PDF);
+        }
+        return reportInput;
     }
 
     private void setNoticeInfo(final PropertyNoticeInfo propertyNotice, final BasicPropertyImpl basicProperty) {
@@ -497,6 +547,14 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
 
     public void setUlbCode(final String ulbCode) {
         this.ulbCode = ulbCode;
+    }
+
+    public RevisionPetitionService getRevisionPetitionService() {
+        return revisionPetitionService;
+    }
+
+    public void setRevisionPetitionService(final RevisionPetitionService revisionPetitionService) {
+        this.revisionPetitionService = revisionPetitionService;
     }
 
 }

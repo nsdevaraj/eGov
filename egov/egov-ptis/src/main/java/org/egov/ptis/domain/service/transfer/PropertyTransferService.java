@@ -39,11 +39,11 @@
 package org.egov.ptis.domain.service.transfer;
 
 import static org.egov.ptis.constants.PropertyTaxConstants.APPLICATION_TYPE_TRANSFER_OF_OWNERSHIP;
-
 import static org.egov.ptis.constants.PropertyTaxConstants.FILESTORE_MODULE_NAME;
 import static org.egov.ptis.constants.PropertyTaxConstants.NOTICE_TYPE_MUTATION_CERTIFICATE;
 import static org.egov.ptis.constants.PropertyTaxConstants.STATUS_ISACTIVE;
 import static org.egov.ptis.constants.PropertyTaxConstants.TRANSFER;
+import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_GENERATE_TRANSFER_NOTICE;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_PREVIEW;
 import static org.egov.ptis.constants.PropertyTaxConstants.WFLOW_ACTION_STEP_SIGN;
 import static org.egov.ptis.constants.PropertyTaxConstants.WF_STATE_CLOSED;
@@ -328,7 +328,20 @@ public class PropertyTransferService {
         PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_MUTATION_CERTIFICATE,
                 propertyMutation.getApplicationNo());
         ReportOutput reportOutput = new ReportOutput();
-        if (notice == null) {
+        if (WFLOW_ACTION_STEP_GENERATE_TRANSFER_NOTICE.equalsIgnoreCase(actionType)) {
+            final FileStoreMapper fsm = notice.getFileStore();
+            final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
+            byte[] bFile;
+            try {
+                bFile = FileUtils.readFileToByteArray(file);
+            } catch (final IOException e) {
+                throw new ApplicationRuntimeException("Exception while generating Mutation Certificate : " + e);
+            }
+            reportOutput.setReportOutputData(bFile);
+            reportOutput.setReportFormat(FileFormat.PDF);
+            propertyMutation.transition().end();
+            basicProperty.setUnderWorkflow(false);
+        } else {
             final PropertyAckNoticeInfo noticeBean = new PropertyAckNoticeInfo();
             noticeBean.setUlbLogo(cityLogo);
             noticeBean.setMunicipalityName(cityName);
@@ -343,25 +356,15 @@ public class PropertyTransferService {
             final ReportRequest reportInput = new ReportRequest("transferProperty_notice", noticeBean, reportParams);
             reportInput.setReportFormat(FileFormat.PDF);
             reportOutput = reportService.createReport(reportInput);
-            if (WFLOW_ACTION_STEP_SIGN.equalsIgnoreCase(actionType)) {
-                String noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(NOTICE_TYPE_MUTATION_CERTIFICATE);
-                noticeService.saveNotice(propertyMutation.getApplicationNo(),noticeNo, NOTICE_TYPE_MUTATION_CERTIFICATE, basicProperty, new ByteArrayInputStream(reportOutput.getReportOutputData()));
+            if (WFLOW_ACTION_STEP_SIGN.equals(actionType)) {
+                if (notice == null) {
+                    String noticeNo = propertyTaxNumberGenerator.generateNoticeNumber(NOTICE_TYPE_MUTATION_CERTIFICATE);
+                    noticeService.saveNotice(propertyMutation.getApplicationNo(), noticeNo, NOTICE_TYPE_MUTATION_CERTIFICATE,
+                            basicProperty, new ByteArrayInputStream(reportOutput.getReportOutputData()));
+                } else {
+                    noticeService.updateNotice(notice, new ByteArrayInputStream(reportOutput.getReportOutputData()));
+                }
             } 
-        } else {
-            final FileStoreMapper fsm = notice.getFileStore();
-            final File file = fileStoreService.fetch(fsm, FILESTORE_MODULE_NAME);
-            byte[] bFile;
-            try {
-                bFile = FileUtils.readFileToByteArray(file);
-            } catch (final IOException e) {
-                throw new ApplicationRuntimeException("Exception while generating Mutation Certificate : " + e);
-            }
-            reportOutput.setReportOutputData(bFile);
-            reportOutput.setReportFormat(FileFormat.PDF);
-            if (!WFLOW_ACTION_STEP_PREVIEW.equalsIgnoreCase(actionType)) {
-                propertyMutation.transition().end();
-                basicProperty.setUnderWorkflow(false);
-            }
         }
         return reportOutput;
     }
