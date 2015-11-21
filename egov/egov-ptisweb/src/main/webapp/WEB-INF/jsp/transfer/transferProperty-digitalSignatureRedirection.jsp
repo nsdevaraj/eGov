@@ -46,17 +46,6 @@
 
 	 	jQuery(document).ready( function() {
 	 		var fileStoreIds = '<s:property value="%{fileStoreIds}" />';
-	 		/* jQuery('<form>.').attr({
-				method: 'post',
-				action: '/ptis/digitalSignature/propertyTax/transitionWorkflow',
-				target: '_self'
-			}).append(jQuery('<input>').attr({
-			    type: 'hidden',
-			    id: 'fileStoreId',
-			    name: 'fileStoreId',
-			    value: fileStoreIds
-			})).appendTo( document.body )
-			.appendTo(document.body).submit();  */
 			var ulbCode = '<s:property value="%{ulbCode}" />';
 	 		var callBackUrl = '/ptis/digitalSignature/propertyTax/transitionWorkflow';
 			jQuery('<form>.').attr({
