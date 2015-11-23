@@ -207,7 +207,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
                         "From PropertyMutation where id = ? ",
                         Long.valueOf(id[0]));
                 final BasicProperty basicProperty = propertyMutation.getBasicProperty();
-                transferOwnerService.generateTransferNotice(basicProperty, propertyMutation, cityName, cityLogo, entry);
+                transferOwnerService.generateTransferNotice(basicProperty, propertyMutation, cityName, cityLogo, WFLOW_ACTION_STEP_SIGN);
                 final PtNotice notice = noticeService.getNoticeByNoticeTypeAndApplicationNumber(NOTICE_TYPE_MUTATION_CERTIFICATE,
                         propertyMutation.getApplicationNo());
                 fileStoreId.append(notice.getFileStore().getFileStoreId());
