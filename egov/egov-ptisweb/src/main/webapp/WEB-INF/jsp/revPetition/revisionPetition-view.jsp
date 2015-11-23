@@ -171,7 +171,7 @@
 		} else if (actionName == 'Print Endoresement') {
 			action = 'revPetition-generateEnodresementNotice.action';
 		} else if (actionName == 'Print Special Notice' || actionName == 'Sign') {
-			action = 'revPetition-generateSpecialNotice.action?actionType='+actionName;
+			action = 'revPetition-generateSpecialNotice.action?actionType='+actionName+'&objectionId='+document.getElementById("model.id").value;
 		} else if (actionName == 'Preview' ) {
 			var params = [
 	   			'height='+screen.height,

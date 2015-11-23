@@ -167,6 +167,7 @@ public class DigitalSignatureWorkflowController {
             }
         }
         model.addAttribute("successMessage", "Digitally Signed Successfully");
+        model.addAttribute("fileStoreId", fileStoreId.length == 1 ? fileStoreId[0] : "");
         return DIGITAL_SIGNATURE_SUCCESS;
     }
 

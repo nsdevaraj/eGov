@@ -71,6 +71,15 @@ function generateNotice(obj, actionName, currentState){
 	}
 }
 
+function previewSignedNotice(signedFileStoreId) {
+	var params = [
+		'height='+screen.height, 
+	    'width='+screen.width,
+	    'fullscreen=yes' 
+	].join(',');
+	window.open('/ptis/notice/previewSignedNotice.action?signedFileStoreId='+signedFileStoreId, "NoticeWindow", params);
+}
+
 jQuery('#submitButton')
 		.click(
 				function(e) {

@@ -150,6 +150,7 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
     private String fileStoreIds;
     private String ulbCode;
     private RevisionPetitionService revisionPetitionService;
+    private String signedFileStoreId;
 
     @Autowired
     private DesignationService designationService;
@@ -193,9 +194,11 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
                 noticeMode = APPLICATION_TYPE_DEMOLITION;
                 final BasicPropertyImpl basicProperty = (BasicPropertyImpl) getPersistenceService().findByNamedQuery(
                         QUERY_BASICPROPERTY_BY_BASICPROPID, Long.valueOf(id[0]));
-                basicProperty.getWFProperty().setStatus(STATUS_ISACTIVE);
-                basicProperty.getProperty().setStatus(STATUS_ISHISTORY);
-                basicPropertyService.update(basicProperty);
+                if (basicProperty.getWFProperty() != null) {
+                    basicProperty.getProperty().setStatus(STATUS_ISHISTORY);
+                    basicProperty.getWFProperty().setStatus(STATUS_ISACTIVE);
+                    basicPropertyService.update(basicProperty);
+                }
                 fileStoreId.append(generatePropertyNotice(Long.valueOf(id[0]), id[1]));
             } else {
                 final HttpServletRequest request = ServletActionContext.getRequest();
@@ -316,6 +319,23 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
             propService.updateIndexes(property, APPLICATION_TYPE_ALTER_ASSESSENT);
             basicPropertyService.update(basicProperty);
         }
+        return NOTICE;
+    }
+    
+    @Action(value = "/notice/previewSignedNotice")
+    public String previewSignedNotice() {
+        File file = fileStoreService.fetch(signedFileStoreId, FILESTORE_MODULE_NAME);
+        byte[] bFile;
+        try {
+            bFile = FileUtils.readFileToByteArray(file);
+        } catch (final IOException e) {
+            throw new ApplicationRuntimeException("Exception while generating Special Notcie : " + e);
+        }
+        ReportOutput reportOutput = new ReportOutput();
+        reportOutput.setReportOutputData(bFile);
+        reportOutput.setReportFormat(FileFormat.PDF);
+        getSession().remove(ReportConstants.ATTRIB_EGOV_REPORT_OUTPUT_MAP);
+        reportId = ReportViewerUtil.addReportToSession(reportOutput, getSession());
         return NOTICE;
     }
 
@@ -555,6 +575,14 @@ public class PropertyTaxNoticeAction extends PropertyTaxBaseAction {
 
     public void setRevisionPetitionService(final RevisionPetitionService revisionPetitionService) {
         this.revisionPetitionService = revisionPetitionService;
+    }
+
+    public String getSignedFileStoreId() {
+        return signedFileStoreId;
+    }
+
+    public void setSignedFileStoreId(String signedFileStoreId) {
+        this.signedFileStoreId = signedFileStoreId;
     }
 
 }
