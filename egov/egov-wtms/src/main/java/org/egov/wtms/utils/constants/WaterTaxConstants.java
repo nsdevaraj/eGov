@@ -244,4 +244,17 @@ public class WaterTaxConstants {
     public static final String THIRD_PARTY_ERR_MSG_SUCCESS = "SUCCESS";
     public static final String MEESEVA_REDIRECT_URL = "/meeseva/generatereceipt?transactionServiceNumber=";
     public static final String USERNAME_ANONYMOUS = "anonymous";
+    
+    public static final String PREVIEWWORKFLOWACTION = "Preview";
+    public static final String SIGNWORKFLOWACTION = "Sign";
+    public static final String WF_PREVIEW_BUTTON = "Preview";
+    public static final String WF_SIGN_BUTTON = "Sign";
+    
+    public static final String CONNECTION_WORK_ORDER = "connectionWorkOrder";
+    public static final String SIGNED_DOCUMENT_PREFIX = "SN/";
+    
+    public static final String MODE = "mode";
+    public static final String APPROVAL_POSITION = "approvalPosition";
+    public static final String APPROVAL_COMMENT = "approvalComment";
+    public static final String WORKFLOW_ACTION = "workFlowAction";
 }
